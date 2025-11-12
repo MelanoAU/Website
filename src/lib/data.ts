@@ -23,7 +23,7 @@ export const newAndNotable: NewProduct[] = [
     title: "Melano Eucalyptus Shampoo Soap",
     subtitle: "Cooling, Clarifying & Scalp-Balancing",
     price: "$65.00",
-    image: "images/M_eucalyptus_SS@1600x1200.webp",
+    image: "/images/M_eucalyptus_SS@1600x1200.webp",
     sizes: undefined,
     badge: "NaN"
   },
@@ -32,7 +32,7 @@ export const newAndNotable: NewProduct[] = [
     title: "Melano Wurtzman Shampoo Soap",
     subtitle: "Fortifying Cleanse, Scalp-Balancing",
     price: "$46.00",
-    image: "images/M_wurtzman_SS@1600x1200.webp",
+    image: "/images/M_wurtzman_SS@1600x1200.webp",
     sizes: ["16.9 fl oz", "33.8 fl oz"],
     badge: "NaN"
   },
@@ -41,7 +41,7 @@ export const newAndNotable: NewProduct[] = [
     title: "Melano Mint Shampoo Soap",
     subtitle: "Mint-Fresh Cleanse, Oil-Balancing",
     price: "$52.00",
-    image: "images/M_mint_SS@1600x1200.webp",
+    image: "/images/M_mint_SS@1600x1200.webp",
     sizes: undefined,
     badge: "NaN"
   },

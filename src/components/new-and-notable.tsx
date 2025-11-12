@@ -60,7 +60,7 @@ export default function NewAndNotable() {
                     {/* 产品图：统一 4:3 比例 */}
                     <div className="relative aspect-[4/3]">
                       <Image
-                        src={asset('p.image')}
+                        src={p.image}
                         alt={p.title}
                         fill
                         className="object-contain"
