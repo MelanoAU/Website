@@ -20,22 +20,29 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup Node
-        uses: actions/setup-node@v4
+      # 安装 pnpm（版本 9）
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      # 设置 Node 并启用 pnpm 缓存（需要 pnpm-lock.yaml）
+      - uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: npm   # 如果你用 pnpm: 改成 "pnpm"，并在下面用 pnpm 命令
+          cache: pnpm
 
+      # 安装依赖（严格依赖于锁文件）
       - name: Install deps
-        run: npm ci
+        run: pnpm i --frozen-lockfile
 
+      # 构建 + 静态导出（产物在 out/）
       - name: Build & Export
         run: |
-          npm run build
-          npm run export
-          # 防止 Jekyll 忽略 /_next 目录
-          touch out/.nojekyll
+          pnpm build
+          pnpm export
+          touch out/.nojekyll   # 防止 Jekyll 忽略 _next 目录
 
+      # 上传构建产物给 Pages
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
