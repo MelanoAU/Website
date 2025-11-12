@@ -1,0 +1,13 @@
+node_modules/
+.pnpm/
+.npm/
+.yarn/
+*.log
+.next/
+out/
+dist/
+.DS_Store
+.idea/
+.vscode/
+.env
+.env.*

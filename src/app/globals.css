@@ -1,0 +1,121 @@
+@import "tailwindcss";
+
+/* 永久深色主题，不区分 light/dark */
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+/* ============
+   全站固定为黑底白字主题
+   （无论系统或浏览器模式）
+   ============ */
+:root {
+  --radius: 0.625rem;
+
+  /* 主色与基础背景 */
+  --background: 0 0% 5%;          /* 近黑 (#0D0D0D) */
+  --foreground: 0 0% 100%;        /* 白 */
+
+  /* 卡片 / 弹窗 */
+  --card: 0 0% 8%;
+  --card-foreground: 0 0% 100%;
+  --popover: 0 0% 8%;
+  --popover-foreground: 0 0% 100%;
+
+  /* 品牌绿色 #A1C1A1 */
+  --primary: 114 21% 71%;
+  --primary-foreground: 0 0% 10%;
+
+  /* 次级与弱化色 */
+  --secondary: 0 0% 15%;
+  --secondary-foreground: 0 0% 100%;
+  --muted: 0 0% 20%;
+  --muted-foreground: 0 0% 75%;
+  --accent: 0 0% 15%;
+  --accent-foreground: 0 0% 100%;
+
+  /* 反馈与边框 */
+  --destructive: 0 70% 50%;
+  --border: 0 0% 25%;
+  --input: 0 0% 20%;
+  --ring: 114 21% 71%;
+}
+
+/* .dark 模式下保持一致（防止外部切换影响） */
+.dark {
+  --background: 0 0% 5%;
+  --foreground: 0 0% 100%;
+  --card: 0 0% 8%;
+  --card-foreground: 0 0% 100%;
+  --popover: 0 0% 8%;
+  --popover-foreground: 0 0% 100%;
+  --primary: 114 21% 71%;
+  --primary-foreground: 0 0% 10%;
+  --secondary: 0 0% 15%;
+  --secondary-foreground: 0 0% 100%;
+  --muted: 0 0% 20%;
+  --muted-foreground: 0 0% 75%;
+  --accent: 0 0% 15%;
+  --accent-foreground: 0 0% 100%;
+  --destructive: 0 70% 50%;
+  --border: 0 0% 25%;
+  --input: 0 0% 20%;
+  --ring: 114 21% 71%;
+}
+
+/* 基础应用层 */
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* 导航毛玻璃 */
+.nav-blur {
+  backdrop-filter: saturate(140%) blur(8px);
+  -webkit-backdrop-filter: saturate(140%) blur(8px);
+}
+
+/* 链接下划线动效 */
+.link-underline {
+  position: relative;
+}
+.link-underline::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: -2px;
+  width: 0;
+  height: 1px;
+  background: hsl(var(--primary));
+  transition: width 0.25s ease;
+}
+.link-underline:hover::after {
+  width: 100%;
+}
