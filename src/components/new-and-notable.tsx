@@ -8,6 +8,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { newAndNotable } from "@/lib/data"   // ← 从 data.ts 读取你的数据（含 badge）
 import { asset } from '@/lib/asset'
+import { Img, Video, Source } from '@/components/AssetMedia'
 
 export default function NewAndNotable() {
   // 只保留 badge === "NaN" 的条目

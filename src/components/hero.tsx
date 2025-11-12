@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { cubicBezier } from "framer-motion"
 import { ArrowRight } from "lucide-react"
 import { asset } from '@/lib/asset'
+import { Img, Video, Source } from '@/components/AssetMedia'
 
 // 用一个可复用的 easing 函数
 const easeBezier = cubicBezier(0.22, 1, 0.36, 1)
@@ -16,26 +17,22 @@ const fadeUp = (delay = 0) => ({
   transition: { duration: 0.6, delay, ease: easeBezier }
 })
 
-const VIDEO_SRC = "videos/hero.mp4"
-// 建议准备一张海报图（视频未能立即播放时显示），放到 public/images 下
-const POSTER_SRC = "/images/hero-poster.jpg"
-
 export default function Hero() {
   return (
     <section className="relative h-screen md:h-[90svh] flex items-center justify-center px-6 text-center overflow-hidden">
       {/* 背景视频 */}
       <div className="absolute inset-0 -z-10 overflow-hidden">
-        <video
-          className="w-full h-full object-cover"
-          src={asset('VIDEO_SRC')}
-          // iOS/Safari 自播放的关键：muted + playsInline
-          autoPlay
-          muted
-          playsInline
-          loop
-          preload="auto"
-          poster={POSTER_SRC}
-        />
+      <video
+        className="w-full h-full object-cover"
+        src={asset('/videos/hero.mp4')}
+        // iOS/Safari 自播放的关键：muted + playsInline
+        autoPlay
+        muted
+        playsInline
+        loop
+        preload="auto"
+        poster={asset('/images/hero-poster.jpg')}
+      />
         {/* 叠一层渐变遮罩，保证文字对比度 */}
         <div className="absolute inset-0 bg-black/40 md:bg-black/35" />
         {/* 可选：在底部再加一层由下到上透明的渐变，提升层次 */}
