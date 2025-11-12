@@ -7,7 +7,7 @@ export const imageLoader = ({ src }: { src: string }) => {
   const base = process.env.NEXT_PUBLIC_BASE_PATH ?? '';
 
   // 允许传入 "images/x.webp" 或 "/images/x.webp"
-  const path = src.startsWith('/') ? src : `/${src}`;
+  const path = src.startsWith('/') ? src : `/Website/${src}`;
 
   return `${base}${path}`;
 };
