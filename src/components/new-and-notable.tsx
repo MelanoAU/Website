@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button"
 import { newAndNotable } from "@/lib/data"   // ← 从 data.ts 读取你的数据（含 badge）
 import { asset } from '@/lib/asset'
 import { Img, Video, Source } from '@/components/AssetMedia'
-import { imageLoader } from '@/lib/imageLoader'
+import ImgFit from '@/components/ImgFit'
 
 export default function NewAndNotable() {
   // 只保留 badge === "NaN" 的条目
@@ -60,16 +60,7 @@ export default function NewAndNotable() {
                   <article className="h-full flex flex-col">
                     {/* 产品图：统一 4:3 比例 */}
                     <div className="relative aspect-[4/3]">
-                      <Image
-                        loader={imageLoader}
-                        src={p.image.startsWith('http') ? p.image : (
-                          p.image.startsWith('/images/') ? p.image : `/images/${p.image.replace(/^\/?/, '')}`
-                        )}
-                        alt={p.title}
-                        fill
-                        className="object-contain"
-                        sizes="(min-width:1280px) 33vw, (min-width:640px) 50vw, 100vw"
-                      />
+                      <ImgFit src={p.image} alt={p.title} mode="contain" />
                     </div>
 
                     {/* 标题 + 文案：固定最小高度，避免一高一低 */}
