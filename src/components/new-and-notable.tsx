@@ -62,7 +62,9 @@ export default function NewAndNotable() {
                     <div className="relative aspect-[4/3]">
                       <Image
                         loader={imageLoader}
-                        src={p.image}
+                        src={p.image.startsWith('http') ? p.image : (
+                          p.image.startsWith('/images/') ? p.image : `/images/${p.image.replace(/^\/?/, '')}`
+                        )}
                         alt={p.title}
                         fill
                         className="object-contain"

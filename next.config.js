@@ -4,7 +4,10 @@ const repo = 'Website';
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: 'export',
-  images: { unoptimized: true },
+  images: { 
+    unoptimized: true,
+    loader: 'custom'
+  },
   trailingSlash: true,
   assetPrefix: isProd ? `/${repo}/` : '',
   basePath:   isProd ? `/${repo}`   : '',
