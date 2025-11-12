@@ -9,5 +9,5 @@ export const imageLoader = ({ src }: { src: string }) => {
   // 允许传入 "images/x.webp" 或 "/images/x.webp"
   const path = src.startsWith('/') ? src : `/${src}`;
 
-  return `${base}/Website${path}`;
+  return `${base}${path}`;
 };
