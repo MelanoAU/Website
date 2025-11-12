@@ -35,18 +35,17 @@ jobs:
       - name: Install deps
         run: pnpm i --frozen-lockfile
 
-      # 构建 + 静态导出（产物在 out/）
-      - name: Build & Export
+      - name: Build (Next static export via next.config.js)
         run: |
           pnpm build
-          pnpm export
+          ls -la out || true
           touch out/.nojekyll   # 防止 Jekyll 忽略 _next 目录
 
-      # 上传构建产物给 Pages
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
           path: ./out
+
 
   deploy:
     environment:
