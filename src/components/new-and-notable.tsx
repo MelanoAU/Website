@@ -63,7 +63,7 @@ export default function NewAndNotable() {
                       <Image
                         loader={imageLoader}
                         src={p.image.startsWith('http') ? p.image : (
-                          p.image.startsWith('/images/') ? p.image : `/images/${p.image.replace(/^\/?/, '')}`
+                          p.image.startsWith('/images/') ? p.image : `/Website/images/${p.image.replace(/^\/?/, '')}`
                         )}
                         alt={p.title}
                         fill
