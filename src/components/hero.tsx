@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 // 顶部新增
 import { cubicBezier } from "framer-motion"
 import { ArrowRight } from "lucide-react"
+import { asset } from '@/lib/asset'
 
 // 用一个可复用的 easing 函数
 const easeBezier = cubicBezier(0.22, 1, 0.36, 1)
@@ -15,7 +16,7 @@ const fadeUp = (delay = 0) => ({
   transition: { duration: 0.6, delay, ease: easeBezier }
 })
 
-const VIDEO_SRC = "/videos/hero.mp4"
+const VIDEO_SRC = "videos/hero.mp4"
 // 建议准备一张海报图（视频未能立即播放时显示），放到 public/images 下
 const POSTER_SRC = "/images/hero-poster.jpg"
 
@@ -26,7 +27,7 @@ export default function Hero() {
       <div className="absolute inset-0 -z-10 overflow-hidden">
         <video
           className="w-full h-full object-cover"
-          src={VIDEO_SRC}
+          src={asset('VIDEO_SRC')}
           // iOS/Safari 自播放的关键：muted + playsInline
           autoPlay
           muted

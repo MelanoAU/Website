@@ -6,6 +6,8 @@ import { useEffect, useRef, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Menu, X, Search, ShoppingCart, User, ChevronRight } from "lucide-react"
 import { Sheet, SheetTrigger, SheetContent, SheetClose, SheetHeader, SheetTitle } from "@/components/ui/sheet"
+import { asset } from '@/lib/asset'
+
 
 const LEFT_NAV = [
   { href: "/", label: "Home" },
@@ -100,7 +102,7 @@ export default function Header() {
                 <SheetHeader className="px-4 py-4 border-b border-white/10">
                   <div className="flex items-center justify-between">
                     <SheetTitle className="sr-only">Navigation</SheetTitle>
-                    <Image src="/images/logo@256x228.png" alt="Melano" width={120} height={32} className="h-7 w-auto" />
+                    <Image src={asset('images/logo@256x228.png')} alt="Melano" width={120} height={32} className="h-7 w-auto" />
                     <SheetClose asChild>
                       <button aria-label="Close" className="p-2 rounded-full hover:bg-white/10">
                         <X className="h-5 w-5" />
@@ -228,7 +230,7 @@ export default function Header() {
               实际显示高度用 Tailwind 控制：h-7 md:h-8
             */}
             <Image
-              src="/images/logo@256x228.png"
+              src={asset('images/logo@256x228.png')}
               alt="Melano"
               width={160}
               height={40}

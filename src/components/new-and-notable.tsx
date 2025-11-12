@@ -7,6 +7,7 @@ import useEmblaCarousel from "embla-carousel-react"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { newAndNotable } from "@/lib/data"   // ← 从 data.ts 读取你的数据（含 badge）
+import { asset } from '@/lib/asset'
 
 export default function NewAndNotable() {
   // 只保留 badge === "NaN" 的条目
@@ -58,7 +59,7 @@ export default function NewAndNotable() {
                     {/* 产品图：统一 4:3 比例 */}
                     <div className="relative aspect-[4/3]">
                       <Image
-                        src={p.image}
+                        src={asset('p.image')}
                         alt={p.title}
                         fill
                         className="object-contain"
