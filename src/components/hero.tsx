@@ -7,6 +7,7 @@ import { cubicBezier } from "framer-motion"
 import { ArrowRight } from "lucide-react"
 import { asset } from '@/lib/asset'
 import { Img, Video, Source } from '@/components/AssetMedia'
+import Link from "next/link"
 
 // 用一个可复用的 easing 函数
 const easeBezier = cubicBezier(0.22, 1, 0.36, 1)
@@ -68,7 +69,7 @@ export default function Hero() {
               focus-visible:ring-offset-2 focus-visible:ring-offset-black
             "
           >
-            Shop Now for Beauty
+            <Link href={`/shop`}>Shop Now for Beauty</Link>
             <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-0.5" />
           </Button>
           </div>

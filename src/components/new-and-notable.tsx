@@ -59,15 +59,15 @@ export default function NewAndNotable() {
                 <div key={p.id} className="pl-4 basis-full sm:basis-1/2 lg:basis-1/3">
                   <article className="h-full flex flex-col">
                     {/* 产品图：统一 4:3 比例 */}
-                    <div className="relative aspect-[4/3]">
+                    <Link href={`/product/${p.id}`} className="relative aspect-[4/3]">
                       <ImgFit src={p.image} alt={p.title} mode="contain" />
-                    </div>
+                    </Link>
 
                     {/* 标题 + 文案：固定最小高度，避免一高一低 */}
-                    <div className="mt-6 min-h-[96px]">
+                    <Link href={`/product/${p.id}`} className="mt-6 min-h-[96px]">
                       <h3 className="text-[18px] font-semibold leading-snug">{p.title}</h3>
                       <p className="mt-2 text-[14px] leading-relaxed text-black/75">{p.subtitle}</p>
-                    </div>
+                    </Link>
 
                     {/* 底部：价格 + 按钮 */}
                     <div className="mt-auto">
