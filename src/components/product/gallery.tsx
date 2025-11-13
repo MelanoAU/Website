@@ -3,6 +3,7 @@
 
 import Image from "next/image"
 import { useState } from "react"
+import ImgFit from '@/components/ImgFit'
 
 export default function Gallery({ images, title }: { images: string[]; title: string }) {
   const [active, setActive] = useState(0)
@@ -11,7 +12,8 @@ export default function Gallery({ images, title }: { images: string[]; title: st
     <div>
       {/* 大图：4:3 等比，暗底衬托 */}
       <div className="relative aspect-[4/3] bg-black/20">
-        <Image
+        <ImgFit src={images[active]} alt={title} mode="contain" />
+        {/* <Image
           key={images[active]}
           src={images[active]}
           alt={title}
@@ -19,7 +21,7 @@ export default function Gallery({ images, title }: { images: string[]; title: st
           className="object-contain"
           sizes="(min-width:1280px) 50vw, 100vw"
           priority
-        />
+        /> */}
       </div>
 
       {/* 缩略图 */}
