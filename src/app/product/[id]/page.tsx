@@ -6,6 +6,7 @@ import BuyBox from "@/components/product/buy-box"
 import { newAndNotable } from "@/lib/data"
 import Header from "@/components/header"
 import Footer from "@/components/footer"
+import ImgFit from '@/components/ImgFit'
 
 // 静态导出：声明只允许生成期列出的参数
 export const dynamicParams = false
@@ -92,7 +93,8 @@ export default async function ProductPage({
                 {related.map(p => (
                     <Link key={p.id} href={`/product/${p.id}`} className="group block">
                     <div className="relative aspect-[4/3] bg-black/20">
-                        <img src={p.image} alt={p.title} className="absolute inset-0 h-full w-full object-contain" />
+                        <ImgFit src={p.image} alt={p.title} mode="contain" />
+                        {/* <img src={p.image} alt={p.title} className="absolute inset-0 h-full w-full object-contain" /> */}
                     </div>
                     <div className="mt-3 text-[15px] font-medium">{p.title}</div>
                     <div className="text-sm text-white/70">{p.price}</div>
