@@ -28,7 +28,7 @@ export const newAndNotable: NewProduct[] = [
     badge: "NaN"
   },
   {
-    id: "ss-01",
+    id: "ss-02",
     title: "Melano Wurtzman Shampoo Soap",
     subtitle: "Fortifying Cleanse, Scalp-Balancing",
     price: "$46.00",
@@ -37,7 +37,7 @@ export const newAndNotable: NewProduct[] = [
     badge: "NaN"
   },
   {
-    id: "guest-01",
+    id: "ss-03",
     title: "Melano Mint Shampoo Soap",
     subtitle: "Mint-Fresh Cleanse, Oil-Balancing",
     price: "$52.00",

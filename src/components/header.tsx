@@ -1,12 +1,13 @@
 "use client"
 
 import Link from "next/link"
-import Image from "next/image"
 import { useEffect, useRef, useState } from "react"
-import { Button } from "@/components/ui/button"
+import { asset } from '@/lib/asset'
+import Image from "next/image"
 import { Menu, X, Search, ShoppingCart, User, ChevronRight } from "lucide-react"
 import { Sheet, SheetTrigger, SheetContent, SheetClose, SheetHeader, SheetTitle } from "@/components/ui/sheet"
-import { asset } from '@/lib/asset'
+import { Button } from "@/components/ui/button"
+
 
 
 const LEFT_NAV = [
@@ -89,8 +90,8 @@ export default function Header() {
           <div className="md:hidden">
             <Sheet>
               <SheetTrigger asChild>
-                <Button variant="ghost" size="icon" aria-label="Open Menu" className="text-white">
-                  <Menu />
+                <Button variant="ghost" size="icon" aria-label="Open Menu" className="text-white h-12 w-12 rounded-xl">
+                  <Menu className="size-6" strokeWidth={1.9} />
                 </Button>
               </SheetTrigger>
 
