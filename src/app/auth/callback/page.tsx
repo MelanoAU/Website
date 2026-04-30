@@ -14,21 +14,17 @@ export default function AuthCallbackPage() {
     const supabase = getSupabase()
 
     async function run() {
-      const url = new URL(window.location.href)
-      const code = url.searchParams.get("code")
-      const errParam = url.searchParams.get("error_description") ?? url.searchParams.get("error")
+      const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ""))
+      const queryParams = new URL(window.location.href).searchParams
+      const errParam =
+        hashParams.get("error_description") ??
+        hashParams.get("error") ??
+        queryParams.get("error_description") ??
+        queryParams.get("error")
 
       if (errParam) {
         setError(errParam)
         return
-      }
-
-      if (code) {
-        const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code)
-        if (exchangeError) {
-          setError(exchangeError.message)
-          return
-        }
       }
 
       const { data } = await supabase.auth.getSession()
