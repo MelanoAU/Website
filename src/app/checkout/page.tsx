@@ -71,7 +71,7 @@ function parsePrice(s: string) {
 }
 
 function formatPrice(amount: number) {
-  return `$${amount.toFixed(2)}`
+  return `A$${amount.toFixed(2)}`
 }
 
 function findProduct(id: string): NewProduct | null {
@@ -498,7 +498,7 @@ export default function CheckoutPage() {
             <ul className="mt-5 grid gap-2 text-[11px] text-white/55">
               <li className="flex items-center gap-2">
                 <Truck className="h-3.5 w-3.5 text-brand/85" />
-                Free shipping over $60
+                Free shipping over A$60
               </li>
               <li className="flex items-center gap-2">
                 <RefreshCcw className="h-3.5 w-3.5 text-brand/85" />

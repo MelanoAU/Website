@@ -255,7 +255,7 @@ export default function BuyBox({ id, title, subtitle, price, sizes }: Props) {
         </li>
         <li className="flex items-center gap-3">
           <Truck className="h-4 w-4 text-brand shrink-0" />
-          Free shipping over $60
+          Free shipping over A$60
         </li>
         <li className="flex items-center gap-3">
           <RefreshCcw className="h-4 w-4 text-brand shrink-0" />

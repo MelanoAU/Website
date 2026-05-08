@@ -51,7 +51,7 @@ function parsePrice(p: string) {
 }
 
 function formatPrice(amount: number) {
-  return `$${amount.toFixed(2)}`
+  return `A$${amount.toFixed(2)}`
 }
 
 function findProduct(id: string): NewProduct | null {
@@ -548,7 +548,7 @@ function SummaryCard({
       </Button>
 
       <p className="mt-5 text-[11px] text-white/45 leading-relaxed text-center">
-        Free shipping over $60 · 30-day returns · Secure checkout
+        Free shipping over A$60 · 30-day returns · Secure checkout
       </p>
     </motion.div>
   )

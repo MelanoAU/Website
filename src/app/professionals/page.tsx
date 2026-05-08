@@ -68,7 +68,7 @@ const FAQ = [
   },
   {
     q: "Is there a minimum order?",
-    a: "First order has a $200 minimum. After that, no minimum — order what you need, when you need it.",
+    a: "First order has an A$200 minimum. After that, no minimum — order what you need, when you need it.",
   },
   {
     q: "What are the lead times?",
