@@ -23,8 +23,8 @@ import FixedVideoBackground from "@/components/fixed-video-background"
 import { Button } from "@/components/ui/button"
 import ImgFit from "@/components/ImgFit"
 import { getSupabase } from "@/lib/supabase/client"
-import { newAndNotable } from "@/lib/data"
-import type { NewProduct } from "@/lib/data"
+import { fetchActiveProducts } from "@/lib/products"
+import type { NewProduct } from "@/lib/products"
 import { emitCartChanged } from "@/lib/cart"
 
 const easeBezier = cubicBezier(0.22, 1, 0.36, 1)
@@ -74,15 +74,12 @@ function formatPrice(amount: number) {
   return `A$${amount.toFixed(2)}`
 }
 
-function findProduct(id: string): NewProduct | null {
-  return (newAndNotable ?? []).find((p) => p.id === id) ?? null
-}
-
 export default function CheckoutPage() {
   const router = useRouter()
   const [user, setUser] = useState<User | null>(null)
   const [authChecked, setAuthChecked] = useState(false)
   const [items, setItems] = useState<CartRow[]>([])
+  const [products, setProducts] = useState<NewProduct[]>([])
   const [loadingCart, setLoadingCart] = useState(true)
   const [form, setForm] = useState<FormState>(INITIAL_FORM)
   const [placing, setPlacing] = useState(false)
@@ -104,16 +101,21 @@ export default function CheckoutPage() {
       setAuthChecked(true)
       setForm((f) => ({ ...f, email: data.user!.email ?? "" }))
 
-      const { data: cart, error: e } = await supabase
-        .from("cart_items")
-        .select("id, product_id, size, quantity")
-        .order("updated_at", { ascending: false })
-      if (e) {
-        setError(e.message)
+      // 并行拉 cart_items + 产品目录
+      const [cartResult, productsList] = await Promise.all([
+        supabase
+          .from("cart_items")
+          .select("id, product_id, size, quantity")
+          .order("updated_at", { ascending: false }),
+        fetchActiveProducts().catch(() => [] as NewProduct[]),
+      ])
+      if (cartResult.error) {
+        setError(cartResult.error.message)
         setLoadingCart(false)
         return
       }
-      setItems((cart ?? []) as CartRow[])
+      setItems((cartResult.data ?? []) as CartRow[])
+      setProducts(productsList)
       setLoadingCart(false)
     })
 
@@ -122,10 +124,16 @@ export default function CheckoutPage() {
     }
   }, [router])
 
+  const productMap = useMemo(() => {
+    const m = new Map<string, NewProduct>()
+    for (const p of products) m.set(p.id, p)
+    return m
+  }, [products])
+
   const resolved = useMemo(
     () =>
       items.map((it) => {
-        const product = findProduct(it.product_id)
+        const product = productMap.get(it.product_id) ?? null
         const unit = product ? parsePrice(product.price) : 0
         return {
           ...it,
@@ -134,7 +142,7 @@ export default function CheckoutPage() {
           lineTotal: unit * it.quantity,
         }
       }),
-    [items]
+    [items, productMap]
   )
 
   const subtotal = resolved.reduce((s, it) => s + it.lineTotal, 0)

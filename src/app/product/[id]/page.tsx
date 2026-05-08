@@ -3,12 +3,17 @@ import Header from "@/components/header"
 import Footer from "@/components/footer"
 import FixedVideoBackground from "@/components/fixed-video-background"
 import ProductDetail from "@/components/product/product-detail"
-import { newAndNotable } from "@/lib/data"
+import {
+  fetchActiveProducts,
+  fetchProduct,
+  fetchProductIds,
+} from "@/lib/products"
 
 export const dynamicParams = false
 
-export function generateStaticParams() {
-  return (newAndNotable ?? []).map((p) => ({ id: String(p.id).trim() }))
+export async function generateStaticParams() {
+  const ids = await fetchProductIds()
+  return ids.map((id) => ({ id }))
 }
 
 export default async function ProductPage({
@@ -19,14 +24,11 @@ export default async function ProductPage({
   const { id } = await params
   const pid = decodeURIComponent(id).trim()
 
-  const product = (newAndNotable ?? []).find(
-    (p) => String(p.id).trim() === pid
-  )
+  const product = await fetchProduct(pid)
   if (!product) return notFound()
 
-  const related = (newAndNotable ?? [])
-    .filter((p) => p.badge === "NaN" && p.id !== product.id)
-    .slice(0, 3)
+  const all = await fetchActiveProducts()
+  const related = all.filter((p) => p.id !== product.id).slice(0, 3)
 
   return (
     <>

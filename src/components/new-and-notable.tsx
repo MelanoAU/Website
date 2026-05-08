@@ -7,16 +7,15 @@ import useEmblaCarousel from "embla-carousel-react"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 import { motion, cubicBezier } from "framer-motion"
 import { Button } from "@/components/ui/button"
-import { newAndNotable } from "@/lib/data"   // ← 从 data.ts 读取你的数据（含 badge）
+import type { NewProduct } from "@/lib/products"
 import { asset } from '@/lib/asset'
 import { Img, Video, Source } from '@/components/AssetMedia'
 import ImgFit from '@/components/ImgFit'
 
 const easeBezier = cubicBezier(0.22, 1, 0.36, 1)
 
-export default function NewAndNotable() {
-  // 只保留 badge === "NaN" 的条目
-  const items = (newAndNotable ?? []).filter(p => p.badge === "NaN")
+export default function NewAndNotable({ products }: { products: NewProduct[] }) {
+  const items = products
 
   // 若没有可展示的项目，可选择直接不渲染该区块
   if (!items.length) return null

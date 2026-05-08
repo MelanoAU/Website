@@ -22,8 +22,8 @@ import FixedVideoBackground from "@/components/fixed-video-background"
 import { Button } from "@/components/ui/button"
 import ImgFit from "@/components/ImgFit"
 import { getSupabase } from "@/lib/supabase/client"
-import { newAndNotable } from "@/lib/data"
-import type { NewProduct } from "@/lib/data"
+import { fetchActiveProducts } from "@/lib/products"
+import type { NewProduct } from "@/lib/products"
 import {
   emitCartChanged,
   onCartChanged,
@@ -54,14 +54,11 @@ function formatPrice(amount: number) {
   return `A$${amount.toFixed(2)}`
 }
 
-function findProduct(id: string): NewProduct | null {
-  return (newAndNotable ?? []).find((p) => p.id === id) ?? null
-}
-
 function toDisplay(
-  item: { id?: string; product_id: string; size: string; quantity: number }
+  item: { id?: string; product_id: string; size: string; quantity: number },
+  productMap: Map<string, NewProduct>
 ): DisplayItem {
-  const product = findProduct(item.product_id)
+  const product = productMap.get(item.product_id) ?? null
   const unit = product ? parsePrice(product.price) : 0
   return {
     key: item.id ?? `local::${item.product_id}::${item.size}`,
@@ -88,6 +85,13 @@ export default function CartPage() {
     setLoading(true)
     setError(null)
 
+    // 拉一份产品目录，按 id 索引；用于把 cart_items / 本地 cart 行
+    // 转成包含 title / image / price 的 DisplayItem
+    const productList = await fetchActiveProducts().catch(() => [])
+    const productMap = new Map<string, NewProduct>(
+      productList.map((p) => [p.id, p])
+    )
+
     if (currentUser) {
       const supabase = getSupabase()
       const { data, error: e } = await supabase
@@ -105,10 +109,10 @@ export default function CartPage() {
           product_id: string
           size: string
           quantity: number
-        }) => toDisplay(row))
+        }) => toDisplay(row, productMap))
       )
     } else {
-      setItems(readLocalCart().map(toDisplay))
+      setItems(readLocalCart().map((row) => toDisplay(row, productMap)))
       setLoading(false)
     }
   }, [])

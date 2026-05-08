@@ -20,7 +20,7 @@ import ImgFit from "@/components/ImgFit"
 import { Button } from "@/components/ui/button"
 import { asset } from "@/lib/asset"
 import { gallery as galleryImages } from "@/lib/data"
-import type { NewProduct } from "@/lib/data"
+import type { NewProduct } from "@/lib/products"
 
 const easeBezier = cubicBezier(0.22, 1, 0.36, 1)
 

@@ -6,8 +6,11 @@ import Pillars from "@/components/pillars"
 import NewAndNotable from "@/components/new-and-notable"
 import ClosingCta from "@/components/closing-cta"
 import Footer from "@/components/footer"
+import { fetchActiveProducts } from "@/lib/products"
 
-export default function HomePage() {
+export default async function HomePage() {
+  const products = await fetchActiveProducts()
+
   return (
     <>
       <FixedVideoBackground />
@@ -16,7 +19,7 @@ export default function HomePage() {
         <Hero />
         <Mission />
         <Pillars />
-        <NewAndNotable />
+        <NewAndNotable products={products} />
         <ClosingCta />
       </main>
       <Footer />
