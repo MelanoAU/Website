@@ -11,6 +11,7 @@ import Footer from "@/components/footer"
 import FixedVideoBackground from "@/components/fixed-video-background"
 import { Button } from "@/components/ui/button"
 import { getSupabase } from "@/lib/supabase/client"
+import { mergeLocalCartToDb, popNextRedirect, safeNext } from "@/lib/cart"
 
 const easeBezier = cubicBezier(0.22, 1, 0.36, 1)
 
@@ -41,16 +42,35 @@ export default function AuthCallbackPage() {
         return
       }
 
+      // next 来源：URL query 优先，sessionStorage 兜底
+      const queryNext = safeNext(queryParams.get("next"))
+      const storedNext = popNextRedirect()
+      const next = queryNext ?? storedNext ?? null
+
       const { data } = await supabase.auth.getSession()
 
       if (data.session) {
+        // 验证成功 — 合并匿名 cart，再跳到 next 或 /account
+        try {
+          await mergeLocalCartToDb()
+        } catch {
+          // 不阻塞跳转
+        }
         setStatus("success")
-        // 给用户一点点时间感受到验证成功，然后跳到 account
-        window.setTimeout(() => router.replace("/account"), 1200)
+        window.setTimeout(
+          () => router.replace(next ?? "/account"),
+          1200
+        )
       } else {
-        // 没拿到 session — 把人带到 login，体验上比报错好
+        // 没拿到 session — 跳到 login（带上 next 兜底）
         setStatus("success")
-        window.setTimeout(() => router.replace("/login"), 1000)
+        window.setTimeout(
+          () =>
+            router.replace(
+              next ? `/login?next=${encodeURIComponent(next)}` : "/login"
+            ),
+          1000
+        )
       }
     }
 

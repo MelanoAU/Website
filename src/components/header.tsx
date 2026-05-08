@@ -21,6 +21,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet"
 import { Button } from "@/components/ui/button"
+import { useCartCount } from "@/lib/cart"
 
 const LEFT_NAV = [
   { href: "/", label: "Home" },
@@ -44,6 +45,8 @@ export default function Header() {
   const [hidden, setHidden] = useState(false)
   const lastY = useRef(0)
   const ticking = useRef(false)
+  const cartCount = useCartCount()
+  const cartBadge = cartCount > 99 ? "99+" : String(cartCount)
 
   useEffect(() => {
     const onScroll = () => {
@@ -216,25 +219,33 @@ export default function Header() {
                         href: "/search",
                         label: "Search",
                         Icon: Search,
+                        badge: 0,
                       },
                       {
                         href: "/cart",
                         label: "Cart",
                         Icon: ShoppingBag,
+                        badge: cartCount,
                       },
                       {
                         href: "/login",
                         label: "Account",
                         Icon: User,
+                        badge: 0,
                       },
-                    ].map(({ href, label, Icon }) => (
+                    ].map(({ href, label, Icon, badge }) => (
                       <SheetClose asChild key={label}>
                         <Link
                           href={href}
                           className="flex flex-col items-center justify-center gap-2 rounded-2xl bg-white/[0.06] border border-white/10 py-4 hover:bg-white/[0.1] hover:border-white/20 transition-colors"
                         >
-                          <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-brand/15 text-brand ring-1 ring-brand/30">
+                          <span className="relative inline-flex h-9 w-9 items-center justify-center rounded-full bg-brand/15 text-brand ring-1 ring-brand/30">
                             <Icon className="h-4 w-4" strokeWidth={1.8} />
+                            {badge > 0 && (
+                              <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 grid place-items-center rounded-full bg-brand text-[10px] font-semibold text-black tabular-nums ring-2 ring-[#0B0B0B]">
+                                {badge > 99 ? "99+" : badge}
+                              </span>
+                            )}
                           </span>
                           <span className="text-[11px] tracking-[0.18em] uppercase text-white/85">
                             {label}
@@ -323,10 +334,15 @@ export default function Header() {
             </Link>
             <Link
               href="/cart"
-              aria-label="Cart"
-              className="h-10 w-10 grid place-items-center rounded-full text-white/85 hover:text-brand hover:bg-white/[0.06] transition-colors"
+              aria-label={cartCount > 0 ? `Cart, ${cartCount} item${cartCount === 1 ? "" : "s"}` : "Cart"}
+              className="relative h-10 w-10 grid place-items-center rounded-full text-white/85 hover:text-brand hover:bg-white/[0.06] transition-colors"
             >
               <ShoppingBag className="h-[18px] w-[18px]" strokeWidth={1.9} />
+              {cartCount > 0 && (
+                <span className="absolute top-0.5 right-0.5 min-w-[18px] h-[18px] px-1 grid place-items-center rounded-full bg-brand text-[10px] font-semibold text-black tabular-nums leading-none ring-2 ring-black/40">
+                  {cartBadge}
+                </span>
+              )}
             </Link>
             <Link
               href="/account"

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, type FormEvent } from "react"
+import { useEffect, useState, type FormEvent } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { motion, cubicBezier } from "framer-motion"
@@ -11,15 +11,23 @@ import Footer from "@/components/footer"
 import FixedVideoBackground from "@/components/fixed-video-background"
 import { Button } from "@/components/ui/button"
 import { getSupabase } from "@/lib/supabase/client"
+import { mergeLocalCartToDb, safeNext } from "@/lib/cart"
 
 const easeBezier = cubicBezier(0.22, 1, 0.36, 1)
 
 export default function LoginPage() {
   const router = useRouter()
+  const [next, setNext] = useState<string>("/account")
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (typeof window === "undefined") return
+    const raw = new URLSearchParams(window.location.search).get("next")
+    setNext(safeNext(raw) ?? "/account")
+  }, [])
 
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -31,13 +39,21 @@ export default function LoginPage() {
       email,
       password,
     })
-    setSubmitting(false)
 
     if (signInError) {
+      setSubmitting(false)
       setError(signInError.message)
       return
     }
-    router.push("/account")
+
+    // 把匿名 cart 合并到 DB，然后回跳
+    try {
+      await mergeLocalCartToDb()
+    } catch {
+      // 合并失败也不阻塞登录跳转
+    }
+    setSubmitting(false)
+    router.push(next)
   }
 
   return (
@@ -175,7 +191,11 @@ export default function LoginPage() {
             >
               No account?{" "}
               <Link
-                href="/signup"
+                href={
+                  next === "/account"
+                    ? "/signup"
+                    : `/signup?next=${encodeURIComponent(next)}`
+                }
                 className="text-brand hover:underline underline-offset-4"
               >
                 Create one

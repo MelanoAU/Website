@@ -310,10 +310,10 @@ export default function ShopPage() {
                             <Link href={`/product/${p.id}`}>View</Link>
                           </Button>
                           <Button
-                            onClick={() => alert(`Added ${p.title} to cart`)}
+                            asChild
                             className="rounded-full h-11 bg-brand text-white hover:bg-brand/90"
                           >
-                            Add
+                            <Link href={`/product/${p.id}`}>Add</Link>
                           </Button>
                         </div>
                       </div>

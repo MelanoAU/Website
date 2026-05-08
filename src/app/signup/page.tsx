@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, type FormEvent } from "react"
+import { useEffect, useState, type FormEvent } from "react"
 import Link from "next/link"
 import { motion, cubicBezier } from "framer-motion"
 import {
@@ -18,16 +18,24 @@ import Footer from "@/components/footer"
 import FixedVideoBackground from "@/components/fixed-video-background"
 import { Button } from "@/components/ui/button"
 import { getSupabase, getSiteOrigin } from "@/lib/supabase/client"
+import { safeNext, setNextRedirect } from "@/lib/cart"
 
 const easeBezier = cubicBezier(0.22, 1, 0.36, 1)
 
 export default function SignupPage() {
+  const [next, setNext] = useState<string | null>(null)
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [confirm, setConfirm] = useState("")
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [done, setDone] = useState(false)
+
+  useEffect(() => {
+    if (typeof window === "undefined") return
+    const raw = new URLSearchParams(window.location.search).get("next")
+    setNext(safeNext(raw))
+  }, [])
 
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -43,12 +51,18 @@ export default function SignupPage() {
     }
 
     setSubmitting(true)
+    // 把目标路径塞进 emailRedirectTo 的 query；同时也写到 sessionStorage 兜底
+    if (next) setNextRedirect(next)
+    const callbackUrl = next
+      ? `${getSiteOrigin()}/auth/callback?next=${encodeURIComponent(next)}`
+      : `${getSiteOrigin()}/auth/callback`
+
     const supabase = getSupabase()
     const { error: signUpError } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        emailRedirectTo: `${getSiteOrigin()}/auth/callback`,
+        emailRedirectTo: callbackUrl,
       },
     })
     setSubmitting(false)
@@ -95,7 +109,11 @@ export default function SignupPage() {
                     asChild
                     className="rounded-full h-12 bg-brand text-white px-6 hover:bg-brand/90"
                   >
-                    <Link href="/login">
+                    <Link
+                      href={
+                        next ? `/login?next=${encodeURIComponent(next)}` : "/login"
+                      }
+                    >
                       Go to sign in
                       <ArrowRight className="h-4 w-4" />
                     </Link>
@@ -257,7 +275,9 @@ export default function SignupPage() {
                 >
                   Already have an account?{" "}
                   <Link
-                    href="/login"
+                    href={
+                      next ? `/login?next=${encodeURIComponent(next)}` : "/login"
+                    }
                     className="text-brand hover:underline underline-offset-4"
                   >
                     Sign in
