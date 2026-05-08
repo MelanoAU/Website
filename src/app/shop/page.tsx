@@ -24,16 +24,6 @@ const easeBezier = cubicBezier(0.22, 1, 0.36, 1)
 
 type SortKey = "relevance" | "price-asc" | "price-desc" | "title-asc"
 
-// 暂作视觉占位：等到产品数据带 category 字段后再做真过滤
-const CATEGORIES = [
-  { id: "all", label: "All" },
-  { id: "hair", label: "Hair" },
-  { id: "skin", label: "Skin" },
-  { id: "body", label: "Body" },
-  { id: "limited", label: "Limited" },
-] as const
-type CategoryId = (typeof CATEGORIES)[number]["id"]
-
 const CRAFT_STEPS = [
   {
     icon: Leaf,
@@ -60,7 +50,6 @@ function parsePrice(p: string) {
 export default function ShopPage() {
   const [q, setQ] = useState("")
   const [sort, setSort] = useState<SortKey>("relevance")
-  const [category, setCategory] = useState<CategoryId>("all")
 
   const base = (newAndNotable ?? []).filter((p) => p.badge === "NaN")
 
@@ -124,40 +113,10 @@ export default function ShopPage() {
               transition={{ duration: 0.7, delay: 0.2, ease: easeBezier }}
               className="mt-6 max-w-xl text-base md:text-lg text-white/80 leading-relaxed"
             >
-              Hand-crafted formulas for hair, skin and body — every bar, every
-              drop, made in small batches with botanicals you can trace back to
-              the farm.
+              Hand-crafted shampoo soaps, made in small batches with botanicals
+              you can trace back to the farm. Every bar, slow-cured for the
+              kind of clean that lasts.
             </motion.p>
-
-            {/* 类别 pill chips */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.7, delay: 0.3, ease: easeBezier }}
-              className="mt-10 flex flex-wrap gap-2.5"
-              role="tablist"
-              aria-label="Shop categories"
-            >
-              {CATEGORIES.map((c) => {
-                const active = category === c.id
-                return (
-                  <button
-                    key={c.id}
-                    role="tab"
-                    aria-selected={active}
-                    onClick={() => setCategory(c.id)}
-                    className={[
-                      "h-10 px-5 rounded-full text-sm transition-colors border",
-                      active
-                        ? "bg-brand text-black border-brand"
-                        : "bg-white/[0.06] text-white/85 border-white/15 hover:bg-white/[0.1] hover:border-white/25",
-                    ].join(" ")}
-                  >
-                    {c.label}
-                  </button>
-                )
-              })}
-            </motion.div>
           </div>
         </section>
 
@@ -180,13 +139,6 @@ export default function ShopPage() {
             <div className="text-sm text-white/65">
               <span className="text-white">{items.length}</span> result
               {items.length !== 1 ? "s" : ""}
-              {category !== "all" && (
-                <span className="text-white/50">
-                  {" "}
-                  · in{" "}
-                  <span className="text-white/80 capitalize">{category}</span>
-                </span>
-              )}
             </div>
 
             <div className="flex items-center gap-3">
@@ -252,16 +204,13 @@ export default function ShopPage() {
               <div className="rounded-2xl bg-black/55 backdrop-blur-md border border-white/10 px-6 py-16 text-center">
                 <p className="text-lg text-white/85">No products found.</p>
                 <p className="mt-2 text-sm text-white/60">
-                  Try a different search or clear the filters.
+                  Try a different search term.
                 </p>
                 <button
-                  onClick={() => {
-                    setQ("")
-                    setCategory("all")
-                  }}
+                  onClick={() => setQ("")}
                   className="mt-6 h-11 px-5 rounded-full bg-brand text-black text-sm font-medium hover:bg-brand/90 transition-colors"
                 >
-                  Reset filters
+                  Clear search
                 </button>
               </div>
             ) : (
