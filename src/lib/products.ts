@@ -56,8 +56,10 @@ async function rest<T>(path: string): Promise<T> {
       apikey: SUPABASE_ANON_KEY,
       Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
     },
-    // 不缓存 —— 我们主动控制何时重新抓取
-    cache: "no-store",
+    // `output: 'export'` 静态导出要求构建期可缓存——fetch 结果会烤进静态产物。
+    // 客户端运行时（cart / checkout）的 fetch 也走这条路径，但浏览器自身
+    // 不会受 Next 缓存语义影响，每次仍会真正发 HTTP 请求。
+    cache: "force-cache",
   })
   if (!res.ok) {
     const body = await res.text().catch(() => "")
