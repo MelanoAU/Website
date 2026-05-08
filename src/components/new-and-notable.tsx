@@ -50,7 +50,7 @@ export default function NewAndNotable() {
     <section className="relative px-6 py-24">
       <div
         aria-hidden
-        className="absolute inset-x-0 inset-y-6 md:inset-y-10 mx-auto max-w-7xl rounded-3xl bg-black/55 backdrop-blur-md border border-white/10"
+        className="hidden md:block absolute inset-x-0 inset-y-10 mx-auto max-w-7xl rounded-3xl bg-black/55 backdrop-blur-md border border-white/10"
       />
       <div className="relative mx-auto max-w-6xl">
         <motion.div
@@ -71,12 +71,57 @@ export default function NewAndNotable() {
           </p>
         </motion.div>
 
+        {/* Mobile：竖向编辑式卡片，单列大图 + 行内价格/CTA */}
+        <ul className="md:hidden mt-10 space-y-6">
+          {items.map((p, i) => (
+            <motion.li
+              key={p.id}
+              initial={{ opacity: 0, y: 28 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, amount: 0.25 }}
+              transition={{ duration: 0.7, delay: i * 0.08, ease: easeBezier }}
+              className="overflow-hidden rounded-2xl bg-black/55 backdrop-blur-md border border-white/10"
+            >
+              <Link
+                href={`/product/${p.id}`}
+                className="relative block aspect-[4/3] bg-white/[0.03]"
+              >
+                <ImgFit src={p.image} alt={p.title} mode="contain" />
+              </Link>
+
+              <div className="px-5 pt-5 pb-6">
+                <Link href={`/product/${p.id}`} className="block">
+                  <h3 className="text-xl font-semibold leading-snug text-white">
+                    {p.title}
+                  </h3>
+                  <p className="mt-2 text-sm text-white/70 leading-relaxed">
+                    {p.subtitle}
+                  </p>
+                </Link>
+
+                <div className="mt-5 flex items-center justify-between gap-4">
+                  <span className="text-[15px] font-medium text-white">
+                    {p.price}
+                  </span>
+                  <Button
+                    asChild
+                    className="rounded-full bg-brand text-white px-5 h-11 hover:bg-brand/90 transition-colors"
+                  >
+                    <Link href={`/product/${p.id}`}>Add to cart</Link>
+                  </Button>
+                </div>
+              </div>
+            </motion.li>
+          ))}
+        </ul>
+
+        {/* Desktop：保留三栏轮播 */}
         <motion.div
           initial={{ opacity: 0, y: 32 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, amount: 0.2 }}
           transition={{ duration: 0.8, delay: 0.1, ease: easeBezier }}
-          className="relative mt-12"
+          className="hidden md:block relative mt-12"
         >
           <div className="overflow-hidden" ref={emblaRef}>
             {/* 等高关键：items-stretch + 每个 article 用 flex-col + h-full，底部 mt-auto */}
