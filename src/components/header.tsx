@@ -191,7 +191,7 @@ export default function Header() {
                     </SheetClose>
                     <SheetClose asChild>
                       <a
-                        href="/account"
+                        href="/login"
                         className="flex flex-col items-center justify-center gap-2 rounded-xl bg-white/5 py-3 hover:bg-white/10"
                       >
                         <User className="h-5 w-5" />
