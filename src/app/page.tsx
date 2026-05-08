@@ -8,6 +8,8 @@ import ClosingCta from "@/components/closing-cta"
 import Footer from "@/components/footer"
 import { fetchActiveProducts } from "@/lib/products"
 
+export const revalidate = 60
+
 export default async function HomePage() {
   const products = await fetchActiveProducts()
 

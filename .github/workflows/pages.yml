@@ -1,8 +1,9 @@
 name: Deploy Next.js static to Pages
 
 on:
-  push:
-    branches: [ "main" ]
+  # Site is now deployed via Vercel (melano.au). This workflow is kept as a
+  # manual fallback only — it will fail unless `output: 'export'` is restored
+  # in next.config.js first.
   workflow_dispatch:
 
 permissions:

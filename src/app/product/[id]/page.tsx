@@ -9,7 +9,10 @@ import {
   fetchProductIds,
 } from "@/lib/products"
 
-export const dynamicParams = false
+// Pre-render known product IDs at build, but allow new IDs to be rendered
+// on-demand at runtime (then cached via ISR / on-demand revalidation).
+export const dynamicParams = true
+export const revalidate = 60
 
 export async function generateStaticParams() {
   const ids = await fetchProductIds()
