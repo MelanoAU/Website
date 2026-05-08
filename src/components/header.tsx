@@ -134,14 +134,14 @@ export default function Header() {
                       {LEFT_NAV.map((item) => (
                         <li key={item.href}>
                           <SheetClose asChild>
-                            <a
+                            <Link
                               href={item.href}
                               className="flex items-center justify-between px-3 py-3 rounded-lg
                                         text-base text-white/90 hover:bg-white/5 active:bg-white/10"
                             >
                               <span>{item.label}</span>
                               <ChevronRight className="h-4 w-4 opacity-40" />
-                            </a>
+                            </Link>
                           </SheetClose>
                         </li>
                       ))}
@@ -155,14 +155,14 @@ export default function Header() {
                       {RIGHT_NAV.map((item) => (
                         <li key={item.href}>
                           <SheetClose asChild>
-                            <a
+                            <Link
                               href={item.href}
                               className="flex items-center justify-between px-3 py-3 rounded-lg
                                         text-base text-white/90 hover:bg-white/5 active:bg-white/10"
                             >
                               <span>{item.label}</span>
                               <ChevronRight className="h-4 w-4 opacity-40" />
-                            </a>
+                            </Link>
                           </SheetClose>
                         </li>
                       ))}
@@ -172,31 +172,31 @@ export default function Header() {
                   {/* 快捷图标区 */}
                   <div className="mt-8 px-4 grid grid-cols-3 gap-3">
                     <SheetClose asChild>
-                      <a
+                      <Link
                         href="/search"
                         className="flex flex-col items-center justify-center gap-2 rounded-xl bg-white/5 py-3 hover:bg-white/10"
                       >
                         <Search className="h-5 w-5" />
                         <span className="text-xs text-white/80">Search</span>
-                      </a>
+                      </Link>
                     </SheetClose>
                     <SheetClose asChild>
-                      <a
+                      <Link
                         href="/cart"
                         className="flex flex-col items-center justify-center gap-2 rounded-xl bg-white/5 py-3 hover:bg-white/10"
                       >
                         <ShoppingCart className="h-5 w-5" />
                         <span className="text-xs text-white/80">Cart</span>
-                      </a>
+                      </Link>
                     </SheetClose>
                     <SheetClose asChild>
-                      <a
+                      <Link
                         href="/login"
                         className="flex flex-col items-center justify-center gap-2 rounded-xl bg-white/5 py-3 hover:bg-white/10"
                       >
                         <User className="h-5 w-5" />
                         <span className="text-xs text-white/80">Account</span>
-                      </a>
+                      </Link>
                     </SheetClose>
                   </div>
 
