@@ -83,14 +83,27 @@ export default function Header() {
     <header
       className={[
         "fixed top-0 left-0 right-0 z-50",
-        "transition-all duration-300 ease-out will-change-transform",
+        "transition-transform duration-300 ease-out will-change-transform",
         hidden ? "-translate-y-full" : "translate-y-0",
-        scrolled
-          ? "bg-black/65 backdrop-blur-md border-b border-white/10"
-          : "bg-gradient-to-b from-black/40 via-black/10 to-transparent border-b border-transparent",
       ].join(" ")}
     >
-      <div className="mx-auto w-full h-24 md:h-28 px-4 md:px-6 grid grid-cols-3 md:[grid-template-columns:1fr_auto_1fr] items-center">
+      {/* 背景层：底部用 mask 渐隐，避免与下方内容形成可见的硬边线 */}
+      <div
+        aria-hidden
+        className={[
+          "absolute inset-0 pointer-events-none transition-all duration-300",
+          "bg-gradient-to-b",
+          scrolled
+            ? "from-black/75 via-black/50 to-transparent backdrop-blur-md"
+            : "from-black/40 via-black/10 to-transparent",
+        ].join(" ")}
+        style={{
+          maskImage: "linear-gradient(to bottom, black 65%, transparent)",
+          WebkitMaskImage: "linear-gradient(to bottom, black 65%, transparent)",
+        }}
+      />
+
+      <div className="relative z-10 mx-auto w-full h-24 md:h-28 px-4 md:px-6 grid grid-cols-3 md:[grid-template-columns:1fr_auto_1fr] items-center">
         {/* ============= Left ============= */}
         <div className="flex items-center">
           {/* Mobile: hamburger sheet */}
