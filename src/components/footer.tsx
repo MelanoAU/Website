@@ -1,16 +1,18 @@
 "use client"
 
 import Link from "next/link"
+import Image from "next/image"
 import { useState } from "react"
-import { Button } from "@/components/ui/button"
 import {
-  Lock,
-  Gift,
   Instagram,
   Facebook,
   Youtube,
-  ArrowUp
+  ArrowUp,
+  ArrowRight,
+  Mail,
 } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { asset } from "@/lib/asset"
 
 const ordersLinks = [
   { href: "/contact", label: "Contact us" },
@@ -18,8 +20,7 @@ const ordersLinks = [
   { href: "/shipping", label: "Shipping" },
   { href: "/returns", label: "Returns" },
   { href: "/track-order", label: "Track your order" },
-  { href: "/gift-card-balance", label: "Check gift card balance" },
-  { href: "/terms", label: "Terms of use" },
+  { href: "/gift-card-balance", label: "Gift card balance" },
   { href: "/recalls", label: "Product recalls" },
 ]
 
@@ -27,19 +28,33 @@ const aboutLinks = [
   { href: "/about", label: "Our story" },
   { href: "/foundation", label: "Foundation" },
   { href: "/careers", label: "Careers" },
-  { href: "/privacy", label: "Privacy policy" },
-  { href: "/accessibility", label: "Accessibility Statement" },
-  { href: "/preferences", label: "Online Preferences" },
-  { href: "/consumer-health-notice", label: "Consumer Health Data Notice" },
+  { href: "/sustainability", label: "Sustainability" },
+  { href: "/accessibility", label: "Accessibility" },
+  { href: "/consumer-health-notice", label: "Consumer health notice" },
+]
+
+const supportLinks = [
+  { href: "/professionals", label: "For professionals" },
+  { href: "/rewards", label: "Rewards" },
+  { href: "/reviews", label: "Reviews" },
+  { href: "/preferences", label: "Communication prefs" },
 ]
 
 const legalLinks = [
-  { href: "/terms", label: "Terms & Conditions" },
-  { href: "/sitemap", label: "Site Map" },
-  { href: "/privacy", label: "Privacy Policy" },
-  { href: "/user-content", label: "User Content Permissions" },
-  { href: "/accessibility", label: "Accessibility Statement" },
-  { href: "/preferences", label: "Online Preferences" },
+  { href: "/terms", label: "Terms" },
+  { href: "/privacy", label: "Privacy" },
+  { href: "/sitemap", label: "Sitemap" },
+  { href: "/user-content", label: "User content" },
+]
+
+const socials: Array<{
+  href: string
+  label: string
+  Icon: React.ComponentType<{ className?: string; strokeWidth?: number }>
+}> = [
+  { href: "https://instagram.com", label: "Instagram", Icon: Instagram },
+  { href: "https://facebook.com", label: "Facebook", Icon: Facebook },
+  { href: "https://youtube.com", label: "YouTube", Icon: Youtube },
 ]
 
 export default function Footer() {
@@ -47,119 +62,198 @@ export default function Footer() {
 
   const submitSubscribe = (e: React.FormEvent) => {
     e.preventDefault()
-    // TODO: 在此对接你的订阅 API（如 /api/subscribe）
+    // TODO: 接订阅 API
     alert(`Subscribed: ${email}`)
     setEmail("")
   }
 
   return (
-    <footer className="relative bg-[#171717] text-white">
-
-      {/* 主体四列 */}
-      <div className="mx-auto max-w-7xl px-6 py-12 grid gap-10 lg:grid-cols-4">
-        {/* Orders & support */}
-        <nav aria-label="Orders and support" className="space-y-4">
-          <h3 className="text-lg font-semibold">Orders and support</h3>
-          <ul className="space-y-3 text-sm text-white/80">
-            {ordersLinks.map((l) => (
-              <li key={l.href}>
-                <Link href={l.href} className="hover:text-[#A1C1A1] transition-colors">
-                  {l.label}
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </nav>
-
-        {/* About */}
-        <nav aria-label="About" className="space-y-4">
-          <h3 className="text-lg font-semibold">About</h3>
-          <ul className="space-y-3 text-sm text-white/80">
-            {aboutLinks.map((l) => (
-              <li key={l.href}>
-                <Link href={l.href} className="hover:text-[#A1C1A1] transition-colors">
-                  {l.label}
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </nav>
-
-        {/* Sustainability（示例文案，可按品牌调整） */}
-        <div className="space-y-4">
-          <h3 className="text-lg font-semibold">Sustainability</h3>
-          <p className="text-sm text-white/80 leading-relaxed">
-            All Melano products are vegan, and we do not test our formulations or ingredients on animals. Packaging is
-            recyclable or reusable. We’re working hard to lower our footprint and support communities.
-          </p>
-          <Link href="/sustainability" className="text-sm underline underline-offset-4 hover:text-[#A1C1A1]">
-            Learn more
-          </Link>
-        </div>
-
-        {/* 订阅 */}
-        <div className="space-y-5">
-          <h3 className="text-lg font-semibold">Subscribe to Melano communications</h3>
-          <form onSubmit={submitSubscribe} className="space-y-3">
-            <input
-              type="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="Email address*"
-              className="w-full h-11 rounded-none bg-white text-black px-3 text-sm placeholder:text-black/60 outline-none"
-            />
-            <p className="text-xs text-white/60 leading-relaxed">
-              By submitting this form, I agree to Melano’s{" "}
-              <Link href="/terms" className="underline underline-offset-4 hover:text-[#A1C1A1]">Terms of Use</Link> and{" "}
-              <Link href="/privacy" className="underline underline-offset-4 hover:text-[#A1C1A1]">Privacy Policy</Link>.
+    <footer className="relative bg-black/70 backdrop-blur-md border-t border-white/10 text-white">
+      {/* ============================= */}
+      {/* 1. Newsletter band            */}
+      {/* ============================= */}
+      <section className="border-b border-white/10">
+        <div className="mx-auto max-w-6xl px-6 py-16 md:py-20 grid gap-10 md:grid-cols-12 md:items-center">
+          <div className="md:col-span-7">
+            <span className="block text-[11px] md:text-xs tracking-[0.32em] uppercase text-white/70">
+              Stay in touch
+            </span>
+            <h2 className="mt-4 text-3xl md:text-5xl font-semibold tracking-tight text-white leading-[1.05]">
+              Quiet emails. <br className="hidden md:block" />
+              Real product, real news.
+            </h2>
+            <p className="mt-4 max-w-md text-sm md:text-base text-white/70 leading-relaxed">
+              A short note when something we&apos;ve made is ready, restocked,
+              or retired. No discount spam, no daily blasts.
             </p>
-            <Button type="submit" className="rounded-none bg-white text-black hover:bg-[#A1C1A1]">
-              Submit
-            </Button>
-          </form>
+          </div>
 
-          {/* 社媒 */}
-          <div className="mt-6 flex items-center gap-4">
-            <Link aria-label="Instagram" href="https://instagram.com" className="text-white/80 hover:text-[#A1C1A1]">
-              <Instagram className="h-5 w-5" />
+          <form
+            onSubmit={submitSubscribe}
+            className="md:col-span-5 rounded-2xl bg-white/[0.05] backdrop-blur-md border border-white/10 p-5 md:p-6"
+          >
+            <label
+              htmlFor="footer-email"
+              className="block text-[11px] tracking-[0.28em] uppercase text-white/60"
+            >
+              Email
+            </label>
+            <div className="mt-2 relative">
+              <Mail className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-white/45" />
+              <input
+                id="footer-email"
+                type="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="you@example.com"
+                className="
+                  w-full h-12 pl-11 pr-4
+                  rounded-full bg-white/[0.06] border border-white/15
+                  text-sm text-white placeholder:text-white/40 outline-none
+                  focus:bg-white/10 focus:border-white/30 transition-colors
+                "
+              />
+            </div>
+            <Button
+              type="submit"
+              className="mt-3 w-full rounded-full h-12 bg-brand text-white hover:bg-brand/90 transition-colors"
+            >
+              Subscribe
+              <ArrowRight className="h-4 w-4" />
+            </Button>
+            <p className="mt-3 text-[11px] text-white/45 leading-relaxed">
+              By subscribing you agree to our{" "}
+              <Link
+                href="/terms"
+                className="underline underline-offset-2 hover:text-white/70"
+              >
+                Terms
+              </Link>{" "}
+              &{" "}
+              <Link
+                href="/privacy"
+                className="underline underline-offset-2 hover:text-white/70"
+              >
+                Privacy Policy
+              </Link>
+              .
+            </p>
+          </form>
+        </div>
+      </section>
+
+      {/* ============================= */}
+      {/* 2. Brand + link columns       */}
+      {/* ============================= */}
+      <section className="px-6 py-16">
+        <div className="mx-auto max-w-6xl grid gap-12 md:grid-cols-12">
+          {/* Brand */}
+          <div className="md:col-span-4">
+            <Link href="/" aria-label="Melano home" className="inline-flex">
+              <Image
+                src={asset("images/logo@256x228.png")}
+                alt="Melano"
+                width={160}
+                height={40}
+                className="h-12 w-auto"
+              />
             </Link>
-            <Link aria-label="Facebook" href="https://facebook.com" className="text-white/80 hover:text-[#A1C1A1]">
-              <Facebook className="h-5 w-5" />
-            </Link>
-            <Link aria-label="YouTube" href="https://youtube.com" className="text-white/80 hover:text-[#A1C1A1]">
-              <Youtube className="h-5 w-5" />
-            </Link>
+            <p className="mt-5 max-w-xs text-sm text-white/65 leading-relaxed">
+              Hand-crafted shampoo soaps from Melbourne. Vegan, slow-cured,
+              packaged plastic-free.
+            </p>
+
+            <div className="mt-7 flex items-center gap-2">
+              {socials.map(({ href, label, Icon }) => (
+                <Link
+                  key={label}
+                  aria-label={label}
+                  href={href}
+                  className="h-10 w-10 grid place-items-center rounded-full bg-white/[0.06] border border-white/10 text-white/85 hover:text-brand hover:bg-white/[0.1] hover:border-white/20 transition-colors"
+                >
+                  <Icon className="h-4 w-4" strokeWidth={1.8} />
+                </Link>
+              ))}
+            </div>
+          </div>
+
+          {/* Link columns */}
+          <div className="md:col-span-8 grid gap-10 grid-cols-2 sm:grid-cols-3">
+            <FooterColumn title="Orders & support" links={ordersLinks} />
+            <FooterColumn title="About" links={aboutLinks} />
+            <FooterColumn title="Discover" links={supportLinks} />
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* 版权与法律条款 */}
+      {/* ============================= */}
+      {/* 3. Bottom strip               */}
+      {/* ============================= */}
       <div className="border-t border-white/10">
         <div className="mx-auto max-w-6xl px-6 py-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          <p className="text-xs text-white/70">
+          <p className="text-xs text-white/55">
             © {new Date().getFullYear()} Melano. All rights reserved.
           </p>
-          <ul className="flex flex-wrap gap-x-5 gap-y-2 text-xs text-white/70">
+          <ul className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-white/55">
             {legalLinks.map((l) => (
-              <li key={l.href} className="flex items-center gap-2">
-                <Link href={l.href} className="hover:text-[#A1C1A1] transition-colors">{l.label}</Link>
-                <span className="hidden md:inline-block text-white/30">•</span>
+              <li key={l.href}>
+                <Link
+                  href={l.href}
+                  className="hover:text-brand transition-colors"
+                >
+                  {l.label}
+                </Link>
               </li>
             ))}
           </ul>
         </div>
       </div>
 
-      {/* 回到顶部按钮 */}
+      {/* ============================= */}
+      {/* 4. Back to top                */}
+      {/* ============================= */}
       <button
         aria-label="Back to top"
         onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-        className="fixed bottom-6 right-6 h-10 w-10 rounded-full border border-white/20 bg-white/10 backdrop-blur
-                   flex items-center justify-center text-white/90 hover:text-black hover:bg-[#A1C1A1] transition-colors"
+        className="
+          fixed bottom-6 right-6 z-40
+          h-11 w-11 grid place-items-center
+          rounded-full bg-black/55 backdrop-blur-md border border-white/15
+          text-white/85 hover:text-brand hover:border-white/30 hover:bg-black/70
+          transition-colors
+        "
       >
-        <ArrowUp className="h-5 w-5" />
+        <ArrowUp className="h-4 w-4" />
       </button>
     </footer>
+  )
+}
+
+function FooterColumn({
+  title,
+  links,
+}: {
+  title: string
+  links: { href: string; label: string }[]
+}) {
+  return (
+    <nav aria-label={title} className="space-y-4">
+      <h3 className="text-[11px] tracking-[0.32em] uppercase text-white/60">
+        {title}
+      </h3>
+      <ul className="space-y-2.5 text-sm text-white/80">
+        {links.map((l) => (
+          <li key={l.href}>
+            <Link
+              href={l.href}
+              className="hover:text-brand transition-colors"
+            >
+              {l.label}
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </nav>
   )
 }

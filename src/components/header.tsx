@@ -2,13 +2,25 @@
 
 import Link from "next/link"
 import { useEffect, useRef, useState } from "react"
-import { asset } from '@/lib/asset'
+import { asset } from "@/lib/asset"
 import Image from "next/image"
-import { Menu, X, Search, ShoppingCart, User, ChevronRight } from "lucide-react"
-import { Sheet, SheetTrigger, SheetContent, SheetClose, SheetHeader, SheetTitle } from "@/components/ui/sheet"
+import {
+  Menu,
+  X,
+  Search,
+  ShoppingBag,
+  User,
+  ChevronRight,
+} from "lucide-react"
+import {
+  Sheet,
+  SheetTrigger,
+  SheetContent,
+  SheetClose,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet"
 import { Button } from "@/components/ui/button"
-
-
 
 const LEFT_NAV = [
   { href: "/", label: "Home" },
@@ -22,14 +34,14 @@ const RIGHT_NAV = [
   { href: "/about", label: "About Us" },
 ]
 
-// 可调参数
-const SCROLLED_BLUR_OFFSET = 24;  // 超过此距离开始加毛玻璃/底边
-const DELTA_THRESHOLD = 6;        // 需要超过这个像素差才认定为“方向变化”
-const SHOW_WHEN_TOP = 64;         // 距顶部小于该值时强制显示
+// 滚动行为参数
+const SCROLLED_BLUR_OFFSET = 24
+const DELTA_THRESHOLD = 6
+const SHOW_WHEN_TOP = 64
 
 export default function Header() {
   const [scrolled, setScrolled] = useState(false)
-  const [hidden, setHidden] = useState(false) // true=上移隐藏，false=下移出现
+  const [hidden, setHidden] = useState(false)
   const lastY = useRef(0)
   const ticking = useRef(false)
 
@@ -39,21 +51,18 @@ export default function Header() {
 
       if (!ticking.current) {
         window.requestAnimationFrame(() => {
-          // 1) 顶部阴影/毛玻璃启用
           setScrolled(y > SCROLLED_BLUR_OFFSET)
 
-          // 2) 根据滚动方向隐藏/显示
           const delta = y - lastY.current
           const goingDown = delta > DELTA_THRESHOLD
           const goingUp = delta < -DELTA_THRESHOLD
 
           if (y < SHOW_WHEN_TOP) {
-            // 回到顶端附近时，始终显示
             setHidden(false)
           } else if (goingDown) {
-            setHidden(true)   // 向下：隐藏
+            setHidden(true)
           } else if (goingUp) {
-            setHidden(false)  // 向上：出现
+            setHidden(false)
           }
 
           lastY.current = y
@@ -63,7 +72,6 @@ export default function Header() {
       }
     }
 
-    // 初始化一次
     lastY.current = window.scrollY
     setScrolled(window.scrollY > SCROLLED_BLUR_OFFSET)
 
@@ -75,37 +83,50 @@ export default function Header() {
     <header
       className={[
         "fixed top-0 left-0 right-0 z-50",
-        // 动效：向上隐藏 / 向下出现
-        "transition-transform duration-300 ease-out will-change-transform",
+        "transition-all duration-300 ease-out will-change-transform",
         hidden ? "-translate-y-full" : "translate-y-0",
-        // 背景：初始透明；滚动后加半透明+毛玻璃+底边
-        scrolled ? "bg-black/70 nav-blur border-b border-white/5" : "bg-transparent",
+        scrolled
+          ? "bg-black/65 backdrop-blur-md border-b border-white/10"
+          : "bg-gradient-to-b from-black/40 via-black/10 to-transparent border-b border-transparent",
       ].join(" ")}
     >
-      {/* 三栏：左 1fr | 中 auto | 右 1fr，保证 Logo 几何居中 */}
-      <div className="mx-auto w-full h-30 px-4 md:px-6 grid grid-cols-3 md:[grid-template-columns:1fr_auto_1fr] items-center">
-        {/* 左栏：桌面导航 / 移动端汉堡 */}
+      <div className="mx-auto w-full h-24 md:h-28 px-4 md:px-6 grid grid-cols-3 md:[grid-template-columns:1fr_auto_1fr] items-center">
+        {/* ============= Left ============= */}
         <div className="flex items-center">
-          {/* Mobile: 汉堡抽屉（更美观+可搜索+点击自动关闭） */}
+          {/* Mobile: hamburger sheet */}
           <div className="md:hidden">
             <Sheet>
               <SheetTrigger asChild>
-                <Button variant="ghost" size="icon" aria-label="Open Menu" className="text-white h-12 w-12 rounded-xl">
-                  <Menu className="size-6" strokeWidth={1.9} />
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  aria-label="Open menu"
+                  className="text-white h-11 w-11 rounded-full hover:bg-white/10"
+                >
+                  <Menu className="size-5" strokeWidth={1.9} />
                 </Button>
               </SheetTrigger>
 
               <SheetContent
                 side="left"
-                className="w-[86vw] max-w-sm p-0 bg-[#0B0B0B] text-white border-r border-white/10"
+                className="w-[88vw] max-w-sm p-0 bg-[#0B0B0B]/95 backdrop-blur-xl text-white border-r border-white/10"
               >
                 {/* 顶部：Logo + 关闭 */}
-                <SheetHeader className="px-4 py-4 border-b border-white/10">
+                <SheetHeader className="px-5 py-5 border-b border-white/10">
                   <div className="flex items-center justify-between">
                     <SheetTitle className="sr-only">Navigation</SheetTitle>
-                    <Image src={asset('images/logo@256x228.png')} alt="Melano" width={120} height={32} className="h-7 w-auto" />
+                    <Image
+                      src={asset("images/logo@256x228.png")}
+                      alt="Melano"
+                      width={120}
+                      height={32}
+                      className="h-7 w-auto"
+                    />
                     <SheetClose asChild>
-                      <button aria-label="Close" className="p-2 rounded-full hover:bg-white/10">
+                      <button
+                        aria-label="Close"
+                        className="h-10 w-10 grid place-items-center rounded-full text-white/85 hover:bg-white/10 transition-colors"
+                      >
                         <X className="h-5 w-5" />
                       </button>
                     </SheetClose>
@@ -113,34 +134,39 @@ export default function Header() {
                 </SheetHeader>
 
                 {/* 可滚动主体 */}
-                <div className="overflow-y-auto max-h-[calc(100dvh-64px)] pb-8">
+                <div className="overflow-y-auto max-h-[calc(100dvh-72px)] pb-10">
                   {/* 搜索框 */}
-                  <div className="px-4 pt-4">
+                  <div className="px-5 pt-5">
                     <div className="relative">
-                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/50" />
+                      <Search className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-white/45" />
                       <input
                         type="search"
                         placeholder="Search products…"
-                        className="w-full h-11 pl-10 pr-3 rounded-xl bg-white/5 text-white placeholder:text-white/50
-                                  outline-none ring-0 focus:bg-white/10 transition-colors"
+                        className="
+                          w-full h-11 pl-11 pr-4
+                          rounded-full bg-white/[0.06] border border-white/15
+                          text-sm text-white placeholder:text-white/45 outline-none
+                          focus:bg-white/10 focus:border-white/30 transition-colors
+                        "
                       />
                     </div>
                   </div>
 
-                  {/* 分组：Browse（左侧导航） */}
-                  <div className="mt-6 px-2">
-                    <div className="px-2 text-xs tracking-wider text-white/50 uppercase">Browse</div>
+                  {/* Browse */}
+                  <div className="mt-7 px-3">
+                    <div className="px-2 text-[11px] tracking-[0.32em] uppercase text-white/55">
+                      Browse
+                    </div>
                     <ul className="mt-2 space-y-1">
                       {LEFT_NAV.map((item) => (
                         <li key={item.href}>
                           <SheetClose asChild>
                             <Link
                               href={item.href}
-                              className="flex items-center justify-between px-3 py-3 rounded-lg
-                                        text-base text-white/90 hover:bg-white/5 active:bg-white/10"
+                              className="flex items-center justify-between px-3 py-3 rounded-xl text-base text-white/90 hover:bg-white/[0.06] active:bg-white/10 transition-colors"
                             >
                               <span>{item.label}</span>
-                              <ChevronRight className="h-4 w-4 opacity-40" />
+                              <ChevronRight className="h-4 w-4 text-white/35" />
                             </Link>
                           </SheetClose>
                         </li>
@@ -148,20 +174,21 @@ export default function Header() {
                     </ul>
                   </div>
 
-                  {/* 分组：Company（右侧导航） */}
-                  <div className="mt-6 px-2">
-                    <div className="px-2 text-xs tracking-wider text-white/50 uppercase">Company</div>
+                  {/* Company */}
+                  <div className="mt-6 px-3">
+                    <div className="px-2 text-[11px] tracking-[0.32em] uppercase text-white/55">
+                      Company
+                    </div>
                     <ul className="mt-2 space-y-1">
                       {RIGHT_NAV.map((item) => (
                         <li key={item.href}>
                           <SheetClose asChild>
                             <Link
                               href={item.href}
-                              className="flex items-center justify-between px-3 py-3 rounded-lg
-                                        text-base text-white/90 hover:bg-white/5 active:bg-white/10"
+                              className="flex items-center justify-between px-3 py-3 rounded-xl text-base text-white/90 hover:bg-white/[0.06] active:bg-white/10 transition-colors"
                             >
                               <span>{item.label}</span>
-                              <ChevronRight className="h-4 w-4 opacity-40" />
+                              <ChevronRight className="h-4 w-4 text-white/35" />
                             </Link>
                           </SheetClose>
                         </li>
@@ -170,38 +197,42 @@ export default function Header() {
                   </div>
 
                   {/* 快捷图标区 */}
-                  <div className="mt-8 px-4 grid grid-cols-3 gap-3">
-                    <SheetClose asChild>
-                      <Link
-                        href="/search"
-                        className="flex flex-col items-center justify-center gap-2 rounded-xl bg-white/5 py-3 hover:bg-white/10"
-                      >
-                        <Search className="h-5 w-5" />
-                        <span className="text-xs text-white/80">Search</span>
-                      </Link>
-                    </SheetClose>
-                    <SheetClose asChild>
-                      <Link
-                        href="/cart"
-                        className="flex flex-col items-center justify-center gap-2 rounded-xl bg-white/5 py-3 hover:bg-white/10"
-                      >
-                        <ShoppingCart className="h-5 w-5" />
-                        <span className="text-xs text-white/80">Cart</span>
-                      </Link>
-                    </SheetClose>
-                    <SheetClose asChild>
-                      <Link
-                        href="/login"
-                        className="flex flex-col items-center justify-center gap-2 rounded-xl bg-white/5 py-3 hover:bg-white/10"
-                      >
-                        <User className="h-5 w-5" />
-                        <span className="text-xs text-white/80">Account</span>
-                      </Link>
-                    </SheetClose>
+                  <div className="mt-8 px-5 grid grid-cols-3 gap-3">
+                    {[
+                      {
+                        href: "/search",
+                        label: "Search",
+                        Icon: Search,
+                      },
+                      {
+                        href: "/cart",
+                        label: "Cart",
+                        Icon: ShoppingBag,
+                      },
+                      {
+                        href: "/login",
+                        label: "Account",
+                        Icon: User,
+                      },
+                    ].map(({ href, label, Icon }) => (
+                      <SheetClose asChild key={label}>
+                        <Link
+                          href={href}
+                          className="flex flex-col items-center justify-center gap-2 rounded-2xl bg-white/[0.06] border border-white/10 py-4 hover:bg-white/[0.1] hover:border-white/20 transition-colors"
+                        >
+                          <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-brand/15 text-brand ring-1 ring-brand/30">
+                            <Icon className="h-4 w-4" strokeWidth={1.8} />
+                          </span>
+                          <span className="text-[11px] tracking-[0.18em] uppercase text-white/85">
+                            {label}
+                          </span>
+                        </Link>
+                      </SheetClose>
+                    ))}
                   </div>
 
                   {/* 底部说明 */}
-                  <div className="mt-6 px-4 text-[11px] text-white/40 leading-relaxed">
+                  <div className="mt-8 px-5 text-[11px] text-white/35 leading-relaxed">
                     © {new Date().getFullYear()} Melano. All rights reserved.
                   </div>
                 </div>
@@ -209,13 +240,19 @@ export default function Header() {
             </Sheet>
           </div>
 
-          {/* Desktop: 左侧导航 */}
-          <nav className="hidden md:flex items-center gap-10">
+          {/* Desktop: left nav */}
+          <nav className="hidden md:flex items-center gap-9">
             {LEFT_NAV.map((item) => (
               <Link
                 key={item.href}
                 href={item.href}
-                className="text-sm text-white/90 hover:text-brand transition-colors"
+                className="
+                  relative text-[12px] tracking-[0.18em] uppercase text-white/85
+                  hover:text-brand transition-colors
+                  after:content-[''] after:absolute after:left-0 after:-bottom-1.5
+                  after:h-[1px] after:w-0 after:bg-brand
+                  hover:after:w-full after:transition-[width] after:duration-300
+                "
               >
                 {item.label}
               </Link>
@@ -223,48 +260,67 @@ export default function Header() {
           </nav>
         </div>
 
-        {/* 中栏：Logo 居中 */}
+        {/* ============= Center ============= */}
         <div className="justify-self-center">
-          <Link href="/" aria-label="Melano home" className="inline-flex items-center">
-            {/* 
-              width/height 只是占位以避免布局抖动，
-              实际显示高度用 Tailwind 控制：h-7 md:h-8
-            */}
+          <Link
+            href="/"
+            aria-label="Melano home"
+            className="inline-flex items-center"
+          >
             <Image
-              src={asset('images/logo@256x228.png')}
+              src={asset("images/logo@256x228.png")}
               alt="Melano"
               width={160}
               height={40}
               priority
-              className="h-20 w-auto md:h-20"
+              className="h-14 md:h-16 w-auto"
             />
           </Link>
         </div>
 
-        {/* 右栏：右侧导航 + 图标 */}
-        <div className="flex items-center justify-end gap-10">
-          <nav className="hidden md:flex items-center gap-10">
+        {/* ============= Right ============= */}
+        <div className="flex items-center justify-end gap-8 md:gap-9">
+          {/* Right nav */}
+          <nav className="hidden md:flex items-center gap-9">
             {RIGHT_NAV.map((item) => (
               <Link
                 key={item.href}
                 href={item.href}
-                className="text-sm text-white/90 hover:text-brand transition-colors"
+                className="
+                  relative text-[12px] tracking-[0.18em] uppercase text-white/85
+                  hover:text-brand transition-colors
+                  after:content-[''] after:absolute after:left-0 after:-bottom-1.5
+                  after:h-[1px] after:w-0 after:bg-brand
+                  hover:after:w-full after:transition-[width] after:duration-300
+                "
               >
                 {item.label}
               </Link>
             ))}
           </nav>
 
-          {/* 图标：Search / Cart / Account */}
-          <div className="hidden md:flex items-center gap-6">
-            <Link href="/search" aria-label="Search" className="text-white/90 hover:text-brand">
-              <Search className="h-5 w-5" />
+          {/* Icons */}
+          <div className="hidden md:flex items-center gap-2">
+            <Link
+              href="/search"
+              aria-label="Search"
+              className="h-10 w-10 grid place-items-center rounded-full text-white/85 hover:text-brand hover:bg-white/[0.06] transition-colors"
+            >
+              <Search className="h-[18px] w-[18px]" strokeWidth={1.9} />
             </Link>
-            <Link href="/cart" aria-label="Cart" className="text-white/90 hover:text-brand">
-              <ShoppingCart className="h-5 w-5" />
+            <Link
+              href="/cart"
+              aria-label="Cart"
+              className="h-10 w-10 grid place-items-center rounded-full text-white/85 hover:text-brand hover:bg-white/[0.06] transition-colors"
+            >
+              <ShoppingBag className="h-[18px] w-[18px]" strokeWidth={1.9} />
             </Link>
-            <Link href="/account" aria-label="My Account" className="text-white/90 hover:text-brand">
-              <User className="h-5 w-5" />
+            <Link
+              href="/account"
+              aria-label="My account"
+              className="h-10 w-10 grid place-items-center rounded-full text-white/85 hover:text-brand hover:bg-white/[0.06] transition-colors"
+            >
+              <User className="h-[18px] w-[18px]" strokeWidth={1.9} />
             </Link>
           </div>
         </div>
