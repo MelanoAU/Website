@@ -16,7 +16,6 @@ import {
   ChevronRight,
   Mail,
   Phone,
-  Facebook,
   Plus,
   X as XClose,
   AlertCircle,
@@ -29,7 +28,6 @@ import FixedVideoBackground from "@/components/fixed-video-background"
 import {
   AppleIcon,
   GoogleIcon,
-  XIcon,
   type SocialIconProps,
 } from "@/components/social-icons"
 import { Button } from "@/components/ui/button"
@@ -86,11 +84,9 @@ type ProviderDef = {
 }
 
 const PROVIDERS: ProviderDef[] = [
-  { key: "phone",    label: "Phone",    Icon: Phone },
-  { key: "apple",    label: "Apple",    Icon: AppleIcon },
-  { key: "google",   label: "Google",   Icon: GoogleIcon },
-  { key: "facebook", label: "Facebook", Icon: Facebook },
-  { key: "twitter",  label: "X",        Icon: XIcon },
+  { key: "phone",  label: "Phone",  Icon: Phone },
+  { key: "apple",  label: "Apple",  Icon: AppleIcon },
+  { key: "google", label: "Google", Icon: GoogleIcon },
 ]
 
 export default function AccountPage() {
