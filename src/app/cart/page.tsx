@@ -122,9 +122,9 @@ export default function CartPage() {
     const supabase = getSupabase()
     let active = true
 
-    supabase.auth.getUser().then(async ({ data }) => {
+    supabase.auth.getSession().then(async ({ data }) => {
       if (!active) return
-      const u = data.user ?? null
+      const u = data.session?.user ?? null
       setUser(u)
       setAuthChecked(true)
       await refresh(u)
@@ -140,7 +140,9 @@ export default function CartPage() {
 
     const off = onCartChanged(() => {
       // 用最新的 user 闭包刷新
-      supabase.auth.getUser().then(({ data }) => refresh(data.user ?? null))
+      supabase.auth
+        .getSession()
+        .then(({ data }) => refresh(data.session?.user ?? null))
     })
 
     return () => {

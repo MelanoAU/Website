@@ -66,13 +66,14 @@ export default function AccountPage() {
     const supabase = getSupabase()
     let active = true
 
-    supabase.auth.getUser().then(({ data }) => {
+    supabase.auth.getSession().then(({ data }) => {
       if (!active) return
-      if (!data.user) {
+      const sessionUser = data.session?.user ?? null
+      if (!sessionUser) {
         router.replace("/login")
         return
       }
-      setUser(data.user)
+      setUser(sessionUser)
       setLoading(false)
     })
 

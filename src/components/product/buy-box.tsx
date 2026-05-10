@@ -45,8 +45,9 @@ export default function BuyBox({ id, title, subtitle, price, sizes }: Props) {
 
     const supabase = getSupabase()
     const {
-      data: { user },
-    } = await supabase.auth.getUser()
+      data: { session },
+    } = await supabase.auth.getSession()
+    const user = session?.user ?? null
 
     if (!user) {
       // 匿名 → 写本地 cart，再去登录；登录回跳后会自动合并并落到 /checkout
@@ -76,8 +77,9 @@ export default function BuyBox({ id, title, subtitle, price, sizes }: Props) {
 
     const supabase = getSupabase()
     const {
-      data: { user },
-    } = await supabase.auth.getUser()
+      data: { session },
+    } = await supabase.auth.getSession()
+    const user = session?.user ?? null
 
     // 未登录 → 写入匿名本地 cart；登录后会自动合并到 DB
     if (!user) {

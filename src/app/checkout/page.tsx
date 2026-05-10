@@ -91,15 +91,16 @@ export default function CheckoutPage() {
     const supabase = getSupabase()
     let active = true
 
-    supabase.auth.getUser().then(async ({ data }) => {
+    supabase.auth.getSession().then(async ({ data }) => {
       if (!active) return
-      if (!data.user) {
+      const sessionUser = data.session?.user ?? null
+      if (!sessionUser) {
         router.replace("/login?next=/checkout")
         return
       }
-      setUser(data.user)
+      setUser(sessionUser)
       setAuthChecked(true)
-      setForm((f) => ({ ...f, email: data.user!.email ?? "" }))
+      setForm((f) => ({ ...f, email: sessionUser.email ?? "" }))
 
       // 并行拉 cart_items + 产品目录
       const [cartResult, productsList] = await Promise.all([
