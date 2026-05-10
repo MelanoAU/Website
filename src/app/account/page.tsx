@@ -645,7 +645,7 @@ function PhoneRow({
                 className="inline-flex items-center gap-1.5 rounded-full bg-brand/15 hover:bg-brand/25 border border-brand/40 hover:border-brand/60 text-brand px-3 h-8 text-[11px] tracking-[0.14em] uppercase transition-colors disabled:opacity-60"
               >
                 <Plus className="h-3 w-3" strokeWidth={2.4} />
-                Link phone
+                Link
               </button>
             )}
           </div>
@@ -795,7 +795,7 @@ function ProviderRow({
             ) : (
               <>
                 <Plus className="h-3 w-3" strokeWidth={2.4} />
-                Link {provider.label}
+                Link
               </>
             )}
           </button>
