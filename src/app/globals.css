@@ -119,3 +119,22 @@
 .link-underline:hover::after {
   width: 100%;
 }
+
+/* ============================================================
+   全站 dark theme 下原生表单元素配色兜底
+   - <select> 展开后 <option> 由浏览器原生绘制，Tailwind 类无法
+     可靠地控制其文字色。系统默认会用黑字，叠在我们设置的深色
+     背景上会变成"黑字配黑底"几乎不可见。这里统一指定。
+   ============================================================ */
+select option {
+  background-color: #0B0B0B;
+  color: #ffffff;
+}
+select option:disabled,
+select option[disabled] {
+  color: rgba(255, 255, 255, 0.55);
+}
+select option:checked {
+  background-color: #1a1a1a;
+  color: #ffffff;
+}

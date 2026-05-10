@@ -309,7 +309,7 @@ function StarRow({
           className={
             i < Math.round(value)
               ? "text-brand fill-brand"
-              : "text-white/20 fill-white/10"
+              : "text-white/40 fill-transparent"
           }
           strokeWidth={1.5}
         />
@@ -867,7 +867,7 @@ function WriteReview() {
                             "h-7 w-7 transition-colors",
                             n <= display
                               ? "text-brand fill-brand"
-                              : "text-white/25 fill-white/5"
+                              : "text-white/40 fill-transparent hover:text-white/70"
                           )}
                           strokeWidth={1.5}
                         />
