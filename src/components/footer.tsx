@@ -46,70 +46,12 @@ const legalLinks = [
   { href: "/user-content", label: "User content" },
 ]
 
-/* ---------- Brand-mark icons not in lucide (TikTok, X, Xiaohongshu) ---------- */
-
-type SocialIconProps = { className?: string; strokeWidth?: number }
-
-function TikTokIcon({ className }: SocialIconProps) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="currentColor"
-      className={className}
-      aria-hidden="true"
-    >
-      <path d="M19.589 6.686a4.793 4.793 0 0 1-3.77-4.245V2h-3.445v13.672a2.896 2.896 0 0 1-5.201 1.743 2.896 2.896 0 0 1 3.183-4.51v-3.5a6.329 6.329 0 0 0-5.394 10.692 6.33 6.33 0 0 0 10.857-4.424V8.687a8.182 8.182 0 0 0 4.773 1.526V6.79a4.831 4.831 0 0 1-1.003-.104z" />
-    </svg>
-  )
-}
-
-function XIcon({ className }: SocialIconProps) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="currentColor"
-      className={className}
-      aria-hidden="true"
-    >
-      <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
-    </svg>
-  )
-}
-
-/**
- * Xiaohongshu (小红书) — no lucide equivalent and the official mark is too
- * detailed for a 16px badge. Render a rounded square outline with a centered
- * 小 glyph in currentColor — instantly recognisable to the audience while
- * staying visually consistent with lucide's stroke-style icons.
- */
-function XiaohongshuIcon({ className, strokeWidth = 1.8 }: SocialIconProps) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={strokeWidth}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-      aria-hidden="true"
-    >
-      <rect x="3" y="3" width="18" height="18" rx="4" />
-      <text
-        x="12"
-        y="16.5"
-        textAnchor="middle"
-        fontSize="11"
-        fontWeight={700}
-        fill="currentColor"
-        stroke="none"
-        fontFamily="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
-      >
-        小
-      </text>
-    </svg>
-  )
-}
+import {
+  TikTokIcon,
+  XIcon,
+  XiaohongshuIcon,
+  type SocialIconProps,
+} from "@/components/social-icons"
 
 const socials: Array<{
   href: string
