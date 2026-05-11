@@ -117,35 +117,67 @@ export default function AccountPage() {
   }, [])
 
   // Initial auth probe + listener
+  //
+  // We can't gate the UI on supabase.auth.getSession() alone — under
+  // certain SDK internal states (token mid-refresh, localStorage race)
+  // the promise just never resolves, leaving the loading spinner stuck
+  // forever. Instead we treat the INITIAL_SESSION auth event as the
+  // primary source of truth (the SDK guarantees it fires on init), and
+  // keep getSession() with its own timeout as a belt-and-braces
+  // fallback. Worst-case path to "redirect to login": 6 seconds.
   useEffect(() => {
     const supabase = getSupabase()
     let active = true
+    let handled = false
 
-    supabase.auth.getSession().then(async ({ data }) => {
-      if (!active) return
-      const sessionUser = data.session?.user ?? null
+    const handle = (sessionUser: User | null) => {
+      if (!active || handled) return
+      handled = true
       if (!sessionUser) {
         router.replace("/login?next=/account")
         return
       }
       setUser(sessionUser)
       setLoading(false)
-      await refreshAccountData()
-    })
+      refreshAccountData()
+    }
 
     const { data: sub } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        if (!session) {
+      (event, session) => {
+        if (event === "INITIAL_SESSION") {
+          handle(session?.user ?? null)
+        } else if (event === "SIGNED_OUT") {
           router.replace("/login?next=/account")
-        } else {
+        } else if (session) {
+          // SIGNED_IN / TOKEN_REFRESHED / USER_UPDATED — keep fresh
           setUser(session.user)
           refreshAccountData()
         }
       },
     )
 
+    // Fallback path: if the SDK doesn't fire INITIAL_SESSION within
+    // 4s (rare but happens with corrupted localStorage), try getSession
+    // directly with its own 2s timeout. If that hangs too, give up and
+    // redirect to /login rather than spinning forever.
+    const timeoutId = window.setTimeout(() => {
+      if (handled) return
+      Promise.race([
+        supabase.auth.getSession(),
+        new Promise<{ data: { session: null } }>((resolve) =>
+          window.setTimeout(
+            () => resolve({ data: { session: null } }),
+            2000,
+          ),
+        ),
+      ]).then(({ data }) => {
+        handle(data.session?.user ?? null)
+      })
+    }, 4000)
+
     return () => {
       active = false
+      window.clearTimeout(timeoutId)
       sub.subscription.unsubscribe()
     }
   }, [router, refreshAccountData])
