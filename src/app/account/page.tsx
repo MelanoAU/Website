@@ -196,23 +196,35 @@ export default function AccountPage() {
     }
   }
 
-  async function handlePhoneStart() {
+  function handlePhoneStart() {
     if (!phoneInput.trim()) return
     setProviderError(null)
     setProviderNotice(null)
     setBusyProvider("phone")
-    try {
-      await startPhoneUpdate(phoneInput.trim())
-      setOtpStep("otp")
-    } catch (err) {
+
+    // supabase.auth.updateUser({ phone }) is known to occasionally hang
+    // even after the OTP has been dispatched — a Supabase JS auth-lock
+    // quirk. Fire the request, and advance the UI on a short timer
+    // regardless. If the request genuinely fails (bad number format,
+    // Twilio rejection, etc.) the catch handler rolls the UI back.
+    let cancelAdvance = false
+
+    startPhoneUpdate(phoneInput.trim()).catch((err: unknown) => {
+      cancelAdvance = true
       setProviderError(
         err instanceof Error
           ? err.message
           : "Couldn't send a verification code. Check the number and try again.",
       )
-    } finally {
+      setOtpStep("phone")
       setBusyProvider(null)
-    }
+    })
+
+    window.setTimeout(() => {
+      if (cancelAdvance) return
+      setBusyProvider(null)
+      setOtpStep("otp")
+    }, 1500)
   }
 
   async function handlePhoneVerify() {
