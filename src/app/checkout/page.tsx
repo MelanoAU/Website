@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import type { User } from "@supabase/supabase-js"
 import { motion, cubicBezier } from "framer-motion"
 import {
   ShoppingBag,
@@ -23,6 +22,7 @@ import FixedVideoBackground from "@/components/fixed-video-background"
 import { Button } from "@/components/ui/button"
 import ImgFit from "@/components/ImgFit"
 import { getSupabase } from "@/lib/supabase/client"
+import { useRequireAuth } from "@/lib/auth"
 import { fetchActiveProducts } from "@/lib/products"
 import type { NewProduct } from "@/lib/products"
 import { emitCartChanged } from "@/lib/cart"
@@ -76,8 +76,10 @@ function formatPrice(amount: number) {
 
 export default function CheckoutPage() {
   const router = useRouter()
-  const [user, setUser] = useState<User | null>(null)
-  const [authChecked, setAuthChecked] = useState(false)
+  const auth = useRequireAuth("/checkout")
+  const user = auth.status === "authenticated" ? auth.user : null
+  const authReady = auth.status === "authenticated"
+
   const [items, setItems] = useState<CartRow[]>([])
   const [products, setProducts] = useState<NewProduct[]>([])
   const [loadingCart, setLoadingCart] = useState(true)
@@ -86,44 +88,45 @@ export default function CheckoutPage() {
   const [error, setError] = useState<string | null>(null)
   const [orderId, setOrderId] = useState<string | null>(null)
 
-  // Auth gate + initial cart fetch
+  // Pre-fill email from the signed-in user once we know them.
   useEffect(() => {
-    const supabase = getSupabase()
+    if (!user) return
+    setForm((f) => ({ ...f, email: f.email || user.email || "" }))
+  }, [user?.id, user?.email])
+
+  // Load cart_items + product catalogue in parallel once auth is ready.
+  useEffect(() => {
+    if (!authReady) return
     let active = true
-
-    supabase.auth.getSession().then(async ({ data }) => {
-      if (!active) return
-      const sessionUser = data.session?.user ?? null
-      if (!sessionUser) {
-        router.replace("/login?next=/checkout")
-        return
-      }
-      setUser(sessionUser)
-      setAuthChecked(true)
-      setForm((f) => ({ ...f, email: sessionUser.email ?? "" }))
-
-      // 并行拉 cart_items + 产品目录
-      const [cartResult, productsList] = await Promise.all([
-        supabase
-          .from("cart_items")
-          .select("id, product_id, size, quantity")
-          .order("updated_at", { ascending: false }),
-        fetchActiveProducts().catch(() => [] as NewProduct[]),
-      ])
-      if (cartResult.error) {
-        setError(cartResult.error.message)
+    const supabase = getSupabase()
+    Promise.all([
+      supabase
+        .from("cart_items")
+        .select("id, product_id, size, quantity")
+        .order("updated_at", { ascending: false }),
+      fetchActiveProducts().catch(() => [] as NewProduct[]),
+    ])
+      .then(([cartResult, productsList]) => {
+        if (!active) return
+        if (cartResult.error) {
+          setError(cartResult.error.message)
+        } else {
+          setItems((cartResult.data ?? []) as CartRow[])
+        }
+        setProducts(productsList)
         setLoadingCart(false)
-        return
-      }
-      setItems((cartResult.data ?? []) as CartRow[])
-      setProducts(productsList)
-      setLoadingCart(false)
-    })
-
+      })
+      .catch((err: unknown) => {
+        if (!active) return
+        setError(
+          err instanceof Error ? err.message : "Couldn't load your cart.",
+        )
+        setLoadingCart(false)
+      })
     return () => {
       active = false
     }
-  }, [router])
+  }, [authReady])
 
   const productMap = useMemo(() => {
     const m = new Map<string, NewProduct>()
@@ -233,7 +236,7 @@ export default function CheckoutPage() {
   // Render
   // ============================================================
 
-  if (!authChecked) {
+  if (!authReady) {
     return (
       <Shell>
         <CenteredLoader label="Loading…" />

@@ -46,14 +46,16 @@ export default function LoginPage() {
       return
     }
 
-    // 把匿名 cart 合并到 DB，然后回跳
-    try {
-      await mergeLocalCartToDb()
-    } catch {
-      // 合并失败也不阻塞登录跳转
-    }
-    setSubmitting(false)
-    router.push(next)
+    // CRITICAL: fire-and-forget the anonymous-cart merge. Awaiting it
+    // here used to hang the form indefinitely when the RPC stalled in
+    // the Supabase auth-lock — the redirect never fired and users were
+    // stuck on "Signing in…" forever. The merge failing or hanging is
+    // tolerable; the redirect is not.
+    mergeLocalCartToDb().catch(() => {
+      /* anonymous cart migration is best-effort */
+    })
+
+    router.replace(next)
   }
 
   return (

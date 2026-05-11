@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import type { User } from "@supabase/supabase-js"
 import { motion, cubicBezier } from "framer-motion"
 import {
   ShoppingBag,
@@ -32,7 +31,11 @@ import {
 } from "@/components/social-icons"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
-import { getSupabase } from "@/lib/supabase/client"
+import {
+  patchCachedUser,
+  signOutAndClearStorage,
+  useRequireAuth,
+} from "@/lib/auth"
 import {
   fetchAccountSummary,
   fetchUserIdentities,
@@ -84,15 +87,16 @@ type ProviderDef = {
 }
 
 const PROVIDERS: ProviderDef[] = [
-  { key: "phone",  label: "Phone",  Icon: Phone },
-  { key: "apple",  label: "Apple",  Icon: AppleIcon },
+  { key: "phone", label: "Phone", Icon: Phone },
+  { key: "apple", label: "Apple", Icon: AppleIcon },
   { key: "google", label: "Google", Icon: GoogleIcon },
 ]
 
 export default function AccountPage() {
   const router = useRouter()
-  const [user, setUser] = useState<User | null>(null)
-  const [loading, setLoading] = useState(true)
+  const auth = useRequireAuth("/account")
+  const user = auth.status === "authenticated" ? auth.user : null
+
   const [summary, setSummary] = useState<AccountSummary | null>(null)
   const [identities, setIdentities] = useState<LinkedIdentity[]>([])
   const [busyProvider, setBusyProvider] = useState<string | null>(null)
@@ -104,86 +108,22 @@ export default function AccountPage() {
   const [otpStep, setOtpStep] = useState<"phone" | "otp">("phone")
 
   const refreshAccountData = useCallback(async () => {
-    try {
-      const [s, ids] = await Promise.all([
-        fetchAccountSummary().catch(() => null),
-        fetchUserIdentities().catch(() => [] as LinkedIdentity[]),
-      ])
-      if (s) setSummary(s)
-      setIdentities(ids)
-    } catch {
-      /* noop */
-    }
+    const [s, ids] = await Promise.all([
+      fetchAccountSummary().catch(() => null),
+      fetchUserIdentities().catch(() => [] as LinkedIdentity[]),
+    ])
+    if (s) setSummary(s)
+    setIdentities(ids)
   }, [])
 
-  // Initial auth probe + listener
-  //
-  // We can't gate the UI on supabase.auth.getSession() alone — under
-  // certain SDK internal states (token mid-refresh, localStorage race)
-  // the promise just never resolves, leaving the loading spinner stuck
-  // forever. Instead we treat the INITIAL_SESSION auth event as the
-  // primary source of truth (the SDK guarantees it fires on init), and
-  // keep getSession() with its own timeout as a belt-and-braces
-  // fallback. Worst-case path to "redirect to login": 6 seconds.
+  // Refresh data once we know who the user is, and whenever they change.
   useEffect(() => {
-    const supabase = getSupabase()
-    let active = true
-    let handled = false
-
-    const handle = (sessionUser: User | null) => {
-      if (!active || handled) return
-      handled = true
-      if (!sessionUser) {
-        router.replace("/login?next=/account")
-        return
-      }
-      setUser(sessionUser)
-      setLoading(false)
-      refreshAccountData()
-    }
-
-    const { data: sub } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        if (event === "INITIAL_SESSION") {
-          handle(session?.user ?? null)
-        } else if (event === "SIGNED_OUT") {
-          router.replace("/login?next=/account")
-        } else if (session) {
-          // SIGNED_IN / TOKEN_REFRESHED / USER_UPDATED — keep fresh
-          setUser(session.user)
-          refreshAccountData()
-        }
-      },
-    )
-
-    // Fallback path: if the SDK doesn't fire INITIAL_SESSION within
-    // 4s (rare but happens with corrupted localStorage), try getSession
-    // directly with its own 2s timeout. If that hangs too, give up and
-    // redirect to /login rather than spinning forever.
-    const timeoutId = window.setTimeout(() => {
-      if (handled) return
-      Promise.race([
-        supabase.auth.getSession(),
-        new Promise<{ data: { session: null } }>((resolve) =>
-          window.setTimeout(
-            () => resolve({ data: { session: null } }),
-            2000,
-          ),
-        ),
-      ]).then(({ data }) => {
-        handle(data.session?.user ?? null)
-      })
-    }, 4000)
-
-    return () => {
-      active = false
-      window.clearTimeout(timeoutId)
-      sub.subscription.unsubscribe()
-    }
-  }, [router, refreshAccountData])
+    if (!user) return
+    refreshAccountData()
+  }, [user?.id, user?.phone, refreshAccountData])
 
   async function handleSignOut() {
-    await getSupabase().auth.signOut()
+    await signOutAndClearStorage()
     router.replace("/login")
   }
 
@@ -193,7 +133,7 @@ export default function AccountPage() {
     setBusyProvider(provider)
     try {
       await linkProvider(provider)
-      // Supabase will redirect through OAuth — no further action here
+      // Supabase will redirect to OAuth — control leaves the page
     } catch (err) {
       setProviderError(
         err instanceof Error ? err.message : "Couldn't start the link flow.",
@@ -228,17 +168,17 @@ export default function AccountPage() {
     }
   }
 
+  /**
+   * supabase.auth.updateUser({ phone }) can hang in the SDK's auth-lock
+   * even after the SMS has gone out. Fire-and-forget the request and
+   * advance the UI on a short timer; catch real errors and roll back.
+   */
   function handlePhoneStart() {
     if (!phoneInput.trim()) return
     setProviderError(null)
     setProviderNotice(null)
     setBusyProvider("phone")
 
-    // supabase.auth.updateUser({ phone }) is known to occasionally hang
-    // even after the OTP has been dispatched — a Supabase JS auth-lock
-    // quirk. Fire the request, and advance the UI on a short timer
-    // regardless. If the request genuinely fails (bad number format,
-    // Twilio rejection, etc.) the catch handler rolls the UI back.
     let cancelAdvance = false
 
     startPhoneUpdate(phoneInput.trim()).catch((err: unknown) => {
@@ -259,67 +199,64 @@ export default function AccountPage() {
     }, 1500)
   }
 
+  /**
+   * Verify follows the same fire-and-forget pattern, but we need a real
+   * success signal — so we race three things:
+   *   - onAuthStateChange event carrying a non-empty user.phone (success)
+   *   - verifyPhoneOtp().catch() (failure)
+   *   - 8s wall-clock timeout (safety net)
+   */
   function handlePhoneVerify() {
     if (!otpInput.trim()) return
     setProviderError(null)
     setBusyProvider("phone")
 
-    // verifyOtp() suffers the same SDK auth-lock quirk as updateUser()
-    // — the promise can hang even after Supabase has actually accepted
-    // the code and updated the user. Don't gate the UI on the promise.
-    // Instead, treat the USER_UPDATED auth event as the source of truth
-    // for success, the promise rejection as the source of truth for
-    // failure, and a wall-clock timeout as the safety net.
     let settled = false
-    const supabase = getSupabase()
 
-    const { data: sub } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        if (settled) return
-        // INITIAL_SESSION fires synchronously on every listener
-        // registration with a snapshot of the current state, not a
-        // real update — ignore it.
-        if (event === "INITIAL_SESSION") return
-        // Don't gate on event type — Supabase JS sometimes emits
-        // SIGNED_IN or TOKEN_REFRESHED instead of USER_UPDATED after
-        // a phone_change verify. The reliable success signal is just
-        // "the user now has a non-empty phone field".
-        if (session?.user.phone && session.user.phone.trim() !== "") {
+    // Re-use the same supabase client for the listener
+    import("@/lib/supabase/client").then(({ getSupabase }) => {
+      const supabase = getSupabase()
+      const { data: sub } = supabase.auth.onAuthStateChange(
+        (event, session) => {
+          if (settled) return
+          if (event === "INITIAL_SESSION") return
+          if (session?.user.phone && session.user.phone.trim() !== "") {
+            settled = true
+            sub.subscription.unsubscribe()
+            setProviderNotice("Phone number verified and linked.")
+            setPhoneEditing(false)
+            setPhoneInput("")
+            setOtpInput("")
+            setOtpStep("phone")
+            patchCachedUser({ phone: session.user.phone })
+            refreshAccountData()
+            setBusyProvider(null)
+          }
+        },
+      )
+
+      verifyPhoneOtp(phoneInput.trim(), otpInput.trim()).catch(
+        (err: unknown) => {
+          if (settled) return
           settled = true
           sub.subscription.unsubscribe()
-          setProviderNotice("Phone number verified and linked.")
-          setPhoneEditing(false)
-          setPhoneInput("")
-          setOtpInput("")
-          setOtpStep("phone")
-          setUser(session.user)
-          refreshAccountData()
+          setProviderError(
+            err instanceof Error ? err.message : "That code didn't match.",
+          )
           setBusyProvider(null)
-        }
-      },
-    )
+        },
+      )
 
-    verifyPhoneOtp(phoneInput.trim(), otpInput.trim()).catch(
-      (err: unknown) => {
+      window.setTimeout(() => {
         if (settled) return
         settled = true
         sub.subscription.unsubscribe()
         setProviderError(
-          err instanceof Error ? err.message : "That code didn't match.",
+          "Verification took too long. The code may still be valid — try again.",
         )
         setBusyProvider(null)
-      },
-    )
-
-    window.setTimeout(() => {
-      if (settled) return
-      settled = true
-      sub.subscription.unsubscribe()
-      setProviderError(
-        "Verification took too long. The code may still be valid — try again.",
-      )
-      setBusyProvider(null)
-    }, 8000)
+      }, 8000)
+    })
   }
 
   async function handlePhoneRemove() {
@@ -329,10 +266,9 @@ export default function AccountPage() {
     setBusyProvider("phone")
     try {
       await removePhone()
-      // The RPC writes auth.users directly, so the local session won't
-      // auto-refresh. Optimistically clear the phone on the in-memory
-      // user object so the row updates immediately.
-      setUser((u) => (u ? ({ ...u, phone: "" } as User) : u))
+      // RPC writes auth.users directly, so we must patch the cached
+      // user manually — SDK won't re-fetch.
+      patchCachedUser({ phone: "" })
       setProviderNotice("Phone number removed.")
     } catch (err) {
       setProviderError(
@@ -343,12 +279,31 @@ export default function AccountPage() {
     }
   }
 
-  // Display name: prefer summary.display_name, fall back to email-derived
+  // While useRequireAuth is still figuring things out, render a spinner
+  // (it'll either resolve us into the page below or redirect to /login).
+  if (auth.status !== "authenticated" || !user) {
+    return (
+      <>
+        <FixedVideoBackground />
+        <Header />
+        <main className="relative min-h-[100svh] flex flex-col">
+          <div className="h-24 md:h-28" />
+          <div className="flex-1 flex items-center justify-center px-6 py-10">
+            <div className="rounded-2xl bg-white/[0.06] backdrop-blur-md border border-white/10 p-8 text-center">
+              <Loader2 className="mx-auto h-6 w-6 animate-spin text-white/70" />
+              <p className="mt-4 text-sm text-white/70">Loading account…</p>
+            </div>
+          </div>
+        </main>
+        <Footer />
+      </>
+    )
+  }
+
   const displayName =
     summary?.display_name ||
-    (user?.email ? user.email.split("@")[0].replace(/[._-]+/g, " ") : "")
+    (user.email ? user.email.split("@")[0].replace(/[._-]+/g, " ") : "")
 
-  // Identities by provider for quick lookup
   const identityByProvider = new Map<string, LinkedIdentity>()
   for (const i of identities) identityByProvider.set(i.provider, i)
 
@@ -358,244 +313,223 @@ export default function AccountPage() {
       <Header />
       <main className="relative min-h-[100svh] flex flex-col">
         <div className="h-24 md:h-28" />
+        <div className="flex-1 px-6 pb-24">
+          <div className="mx-auto max-w-6xl">
+            {/* ==== 1. Greeting header ==== */}
+            <motion.section
+              initial={{ opacity: 0, y: 24 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.7, ease: easeBezier }}
+              className="pt-6 md:pt-12"
+            >
+              <span className="block text-[11px] md:text-xs tracking-[0.32em] uppercase text-white/70">
+                Your account
+              </span>
+              <h1 className="mt-4 text-4xl md:text-6xl font-semibold tracking-tight text-white leading-[1.05] capitalize">
+                Welcome, {displayName || "there"}.
+              </h1>
+              <p className="mt-3 text-sm md:text-base text-white/70">
+                Signed in as <span className="text-white">{user.email}</span>
+                {summary?.tier && (
+                  <span className="ml-2 inline-flex items-center gap-1 rounded-full bg-brand/15 border border-brand/30 px-2.5 py-0.5 text-[10px] tracking-[0.22em] uppercase text-brand">
+                    <Sparkles className="h-3 w-3" strokeWidth={2.4} />
+                    {summary.tier}
+                  </span>
+                )}
+              </p>
+            </motion.section>
 
-        {loading ? (
-          <div className="flex-1 flex items-center justify-center px-6 py-10">
-            <div className="rounded-2xl bg-white/[0.06] backdrop-blur-md border border-white/10 p-8 text-center">
-              <Loader2 className="mx-auto h-6 w-6 animate-spin text-white/70" />
-              <p className="mt-4 text-sm text-white/70">Loading account…</p>
-            </div>
-          </div>
-        ) : user ? (
-          <div className="flex-1 px-6 pb-24">
-            <div className="mx-auto max-w-6xl">
-              {/* ==== 1. Greeting header ==== */}
-              <motion.section
-                initial={{ opacity: 0, y: 24 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.7, ease: easeBezier }}
-                className="pt-6 md:pt-12"
-              >
-                <span className="block text-[11px] md:text-xs tracking-[0.32em] uppercase text-white/70">
-                  Your account
-                </span>
-                <h1 className="mt-4 text-4xl md:text-6xl font-semibold tracking-tight text-white leading-[1.05] capitalize">
-                  Welcome, {displayName || "there"}.
-                </h1>
-                <p className="mt-3 text-sm md:text-base text-white/70">
-                  Signed in as <span className="text-white">{user.email}</span>
-                  {summary?.tier && (
-                    <span className="ml-2 inline-flex items-center gap-1 rounded-full bg-brand/15 border border-brand/30 px-2.5 py-0.5 text-[10px] tracking-[0.22em] uppercase text-brand">
-                      <Sparkles className="h-3 w-3" strokeWidth={2.4} />
-                      {summary.tier}
-                    </span>
-                  )}
-                </p>
-              </motion.section>
+            {/* ==== 2. Quick stats ==== */}
+            <motion.div
+              initial={{ opacity: 0, y: 28 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.7, delay: 0.08, ease: easeBezier }}
+              className="mt-10 grid gap-4 sm:grid-cols-3"
+            >
+              <StatCard
+                label="Orders"
+                value={summary?.orders_count ?? null}
+                href="/account/orders"
+              />
+              <StatCard
+                label="Cart items"
+                value={summary?.cart_items_count ?? null}
+                href="/cart"
+              />
+              <StatCard
+                label="Reward points"
+                value={summary?.reward_points ?? null}
+                href="/account/rewards"
+              />
+            </motion.div>
 
-              {/* ==== 2. Quick stats (live from supabase) ==== */}
-              <motion.div
-                initial={{ opacity: 0, y: 28 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.7, delay: 0.08, ease: easeBezier }}
-                className="mt-10 grid gap-4 sm:grid-cols-3"
-              >
-                <StatCard
-                  label="Orders"
-                  value={summary?.orders_count ?? null}
-                  href="/account/orders"
-                />
-                <StatCard
-                  label="Cart items"
-                  value={summary?.cart_items_count ?? null}
-                  href="/cart"
-                />
-                <StatCard
-                  label="Reward points"
-                  value={summary?.reward_points ?? null}
-                  href="/account/rewards"
-                />
-              </motion.div>
+            {/* ==== 3. Quick actions ==== */}
+            <motion.section
+              initial={{ opacity: 0, y: 28 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.7, delay: 0.16, ease: easeBezier }}
+              className="mt-12"
+            >
+              <h2 className="text-xl md:text-2xl font-semibold text-white">
+                Quick actions
+              </h2>
+              <ul className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                {ACTIONS.map(({ icon: Icon, label, sub, href }) => (
+                  <li key={label}>
+                    <Link
+                      href={href}
+                      className="
+                        group h-full flex flex-col justify-between rounded-2xl
+                        bg-white/[0.06] backdrop-blur-md border border-white/10
+                        p-6
+                        hover:bg-white/[0.09] hover:border-white/15
+                        transition-colors
+                      "
+                    >
+                      <div className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-brand/15 text-brand ring-1 ring-brand/30">
+                        <Icon className="h-5 w-5" strokeWidth={1.8} />
+                      </div>
+                      <div className="mt-8">
+                        <div className="flex items-center justify-between">
+                          <span className="text-lg font-semibold text-white">
+                            {label}
+                          </span>
+                          <ChevronRight className="h-4 w-4 text-white/40 group-hover:text-white/70 group-hover:translate-x-0.5 transition-all" />
+                        </div>
+                        <p className="mt-1.5 text-sm text-white/65">{sub}</p>
+                      </div>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </motion.section>
 
-              {/* ==== 3. Quick actions (white-glass cards) ==== */}
-              <motion.section
-                initial={{ opacity: 0, y: 28 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.7, delay: 0.16, ease: easeBezier }}
-                className="mt-12"
-              >
+            {/* ==== 4. Account details + Connected accounts ==== */}
+            <motion.section
+              initial={{ opacity: 0, y: 28 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.7, delay: 0.24, ease: easeBezier }}
+              className="mt-12 grid gap-6 md:grid-cols-12"
+            >
+              <div className="md:col-span-7">
                 <h2 className="text-xl md:text-2xl font-semibold text-white">
-                  Quick actions
+                  Account details
                 </h2>
-                <ul className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                  {ACTIONS.map(({ icon: Icon, label, sub, href }) => (
-                    <li key={label}>
-                      <Link
-                        href={href}
-                        className="
-                          group h-full flex flex-col justify-between rounded-2xl
-                          bg-white/[0.06] backdrop-blur-md border border-white/10
-                          p-6
-                          hover:bg-white/[0.09] hover:border-white/15
-                          transition-colors
-                        "
-                      >
-                        <div className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-brand/15 text-brand ring-1 ring-brand/30">
-                          <Icon className="h-5 w-5" strokeWidth={1.8} />
-                        </div>
-                        <div className="mt-8">
-                          <div className="flex items-center justify-between">
-                            <span className="text-lg font-semibold text-white">
-                              {label}
-                            </span>
-                            <ChevronRight className="h-4 w-4 text-white/40 group-hover:text-white/70 group-hover:translate-x-0.5 transition-all" />
-                          </div>
-                          <p className="mt-1.5 text-sm text-white/65">
-                            {sub}
-                          </p>
-                        </div>
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              </motion.section>
+                <dl className="mt-5 rounded-2xl bg-white/[0.04] backdrop-blur-md border border-white/10 divide-y divide-white/10">
+                  <DetailRow
+                    icon={Mail}
+                    label="Email"
+                    value={user.email ?? "—"}
+                    meta="Verified"
+                  />
 
-              {/* ==== 4. Account details + Connected accounts ==== */}
-              <motion.section
-                initial={{ opacity: 0, y: 28 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.7, delay: 0.24, ease: easeBezier }}
-                className="mt-12 grid gap-6 md:grid-cols-12"
-              >
-                {/* Connected accounts (left, wider) */}
-                <div className="md:col-span-7">
-                  <h2 className="text-xl md:text-2xl font-semibold text-white">
-                    Account details
-                  </h2>
-                  <dl className="mt-5 rounded-2xl bg-white/[0.04] backdrop-blur-md border border-white/10 divide-y divide-white/10">
-                    {/* Email row */}
-                    <DetailRow
-                      icon={Mail}
-                      label="Email"
-                      value={user.email ?? "—"}
-                      meta="Verified"
-                    />
+                  <PhoneRow
+                    currentPhone={user.phone ?? null}
+                    editing={phoneEditing}
+                    step={otpStep}
+                    phoneInput={phoneInput}
+                    otpInput={otpInput}
+                    busy={busyProvider === "phone"}
+                    onStartEdit={() => {
+                      setPhoneEditing(true)
+                      setOtpStep("phone")
+                      setProviderError(null)
+                      setProviderNotice(null)
+                    }}
+                    onCancelEdit={() => {
+                      setPhoneEditing(false)
+                      setPhoneInput("")
+                      setOtpInput("")
+                      setOtpStep("phone")
+                      setProviderError(null)
+                    }}
+                    onPhoneInput={setPhoneInput}
+                    onOtpInput={setOtpInput}
+                    onSendCode={handlePhoneStart}
+                    onVerify={handlePhoneVerify}
+                    onRemove={handlePhoneRemove}
+                  />
 
-                    {/* Phone row */}
-                    <PhoneRow
-                      currentPhone={user.phone ?? null}
-                      editing={phoneEditing}
-                      step={otpStep}
-                      phoneInput={phoneInput}
-                      otpInput={otpInput}
-                      busy={busyProvider === "phone"}
-                      onStartEdit={() => {
-                        setPhoneEditing(true)
-                        setOtpStep("phone")
-                        setProviderError(null)
-                        setProviderNotice(null)
-                      }}
-                      onCancelEdit={() => {
-                        setPhoneEditing(false)
-                        setPhoneInput("")
-                        setOtpInput("")
-                        setOtpStep("phone")
-                        setProviderError(null)
-                      }}
-                      onPhoneInput={setPhoneInput}
-                      onOtpInput={setOtpInput}
-                      onSendCode={handlePhoneStart}
-                      onVerify={handlePhoneVerify}
-                      onRemove={handlePhoneRemove}
-                    />
+                  {PROVIDERS.filter((p) => p.key !== "phone").map((p) => {
+                    const linked = identityByProvider.get(p.key)
+                    const busy = busyProvider === p.key
+                    return (
+                      <ProviderRow
+                        key={p.key}
+                        provider={p}
+                        identity={linked}
+                        busy={busy}
+                        onLink={() => handleLink(p.key as LinkableProvider)}
+                        onUnlink={() => linked && handleUnlink(linked)}
+                      />
+                    )
+                  })}
 
-                    {/* OAuth providers */}
-                    {PROVIDERS.filter((p) => p.key !== "phone").map((p) => {
-                      const linked = identityByProvider.get(p.key)
-                      const busy = busyProvider === p.key
-                      return (
-                        <ProviderRow
-                          key={p.key}
-                          provider={p}
-                          identity={linked}
-                          busy={busy}
-                          onLink={() => handleLink(p.key as LinkableProvider)}
-                          onUnlink={() => linked && handleUnlink(linked)}
-                        />
-                      )
-                    })}
-
-                    {/* Joined */}
-                    <div className="grid grid-cols-3 gap-4 px-5 py-4 text-sm">
-                      <dt className="col-span-1 text-white/55 tracking-wider uppercase text-[11px] flex items-center gap-2">
-                        Joined
-                      </dt>
-                      <dd className="col-span-2 text-white/90">
-                        {new Date(user.created_at).toLocaleDateString(
-                          undefined,
-                          {
-                            year: "numeric",
-                            month: "long",
-                            day: "numeric",
-                          },
-                        )}
-                      </dd>
-                    </div>
-                  </dl>
-
-                  {(providerError || providerNotice) && (
-                    <div
-                      className={cn(
-                        "mt-4 flex items-start gap-2.5 rounded-xl border px-4 py-3 text-sm",
-                        providerError
-                          ? "border-red-500/30 bg-red-500/10 text-red-200"
-                          : "border-brand/30 bg-brand/10 text-brand",
-                      )}
-                    >
-                      {providerError ? (
-                        <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
-                      ) : (
-                        <Check className="h-4 w-4 mt-0.5 shrink-0" />
-                      )}
-                      <span className="leading-relaxed">
-                        {providerError ?? providerNotice}
-                      </span>
-                    </div>
-                  )}
-                </div>
-
-                {/* Session panel (right) */}
-                <div className="md:col-span-5">
-                  <h2 className="text-xl md:text-2xl font-semibold text-white">
-                    Session
-                  </h2>
-                  <div className="mt-5 rounded-2xl bg-white/[0.04] backdrop-blur-md border border-white/10 p-6">
-                    <p className="text-sm text-white/75 leading-relaxed">
-                      Done for the day? You&apos;ll need to sign in again next
-                      time you visit.
-                    </p>
-                    <Button
-                      onClick={handleSignOut}
-                      className="mt-5 w-full rounded-full h-12 bg-white/[0.06] border border-white/15 text-white hover:bg-white/10 hover:border-white/30 transition-colors"
-                    >
-                      <LogOut className="h-4 w-4" />
-                      Sign out
-                    </Button>
-                    <Button
-                      asChild
-                      className="mt-3 w-full rounded-full h-12 bg-brand text-white hover:bg-brand/90"
-                    >
-                      <Link href="/shop">
-                        Back to shop
-                        <ArrowRight className="h-4 w-4" />
-                      </Link>
-                    </Button>
+                  <div className="grid grid-cols-3 gap-4 px-5 py-4 text-sm">
+                    <dt className="col-span-1 text-white/55 tracking-wider uppercase text-[11px] flex items-center gap-2">
+                      Joined
+                    </dt>
+                    <dd className="col-span-2 text-white/90">
+                      {new Date(user.created_at).toLocaleDateString(undefined, {
+                        year: "numeric",
+                        month: "long",
+                        day: "numeric",
+                      })}
+                    </dd>
                   </div>
+                </dl>
+
+                {(providerError || providerNotice) && (
+                  <div
+                    className={cn(
+                      "mt-4 flex items-start gap-2.5 rounded-xl border px-4 py-3 text-sm",
+                      providerError
+                        ? "border-red-500/30 bg-red-500/10 text-red-200"
+                        : "border-brand/30 bg-brand/10 text-brand",
+                    )}
+                  >
+                    {providerError ? (
+                      <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
+                    ) : (
+                      <Check className="h-4 w-4 mt-0.5 shrink-0" />
+                    )}
+                    <span className="leading-relaxed">
+                      {providerError ?? providerNotice}
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              <div className="md:col-span-5">
+                <h2 className="text-xl md:text-2xl font-semibold text-white">
+                  Session
+                </h2>
+                <div className="mt-5 rounded-2xl bg-white/[0.04] backdrop-blur-md border border-white/10 p-6">
+                  <p className="text-sm text-white/75 leading-relaxed">
+                    Done for the day? You&apos;ll need to sign in again next
+                    time you visit.
+                  </p>
+                  <Button
+                    onClick={handleSignOut}
+                    className="mt-5 w-full rounded-full h-12 bg-white/[0.06] border border-white/15 text-white hover:bg-white/10 hover:border-white/30 transition-colors"
+                  >
+                    <LogOut className="h-4 w-4" />
+                    Sign out
+                  </Button>
+                  <Button
+                    asChild
+                    className="mt-3 w-full rounded-full h-12 bg-brand text-white hover:bg-brand/90"
+                  >
+                    <Link href="/shop">
+                      Back to shop
+                      <ArrowRight className="h-4 w-4" />
+                    </Link>
+                  </Button>
                 </div>
-              </motion.section>
-            </div>
+              </div>
+            </motion.section>
           </div>
-        ) : null}
+        </div>
       </main>
       <Footer />
     </>

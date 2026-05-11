@@ -1,7 +1,6 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { motion, AnimatePresence, cubicBezier } from "framer-motion"
 import {
@@ -23,7 +22,7 @@ import Footer from "@/components/footer"
 import FixedVideoBackground from "@/components/fixed-video-background"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
-import { getSupabase } from "@/lib/supabase/client"
+import { useRequireAuth } from "@/lib/auth"
 import {
   fetchUserOrders,
   type OrderStatus,
@@ -85,49 +84,33 @@ function formatDate(iso: string) {
 }
 
 export default function OrdersPage() {
-  const router = useRouter()
-  const [authChecked, setAuthChecked] = useState(false)
+  const auth = useRequireAuth("/account/orders")
+  const authReady = auth.status === "authenticated"
   const [orders, setOrders] = useState<OrderWithItems[] | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [openId, setOpenId] = useState<string | null>(null)
 
   useEffect(() => {
-    const supabase = getSupabase()
+    if (!authReady) return
     let active = true
-
-    supabase.auth.getSession().then(async ({ data }) => {
-      if (!active) return
-      if (!data.session?.user) {
-        router.replace("/login?next=/account/orders")
-        return
-      }
-      setAuthChecked(true)
-      try {
-        const list = await fetchUserOrders()
+    fetchUserOrders()
+      .then((list) => {
         if (!active) return
         setOrders(list)
         if (list.length > 0) setOpenId(list[0].id)
-      } catch (err) {
-        if (active)
-          setError(
-            err instanceof Error
-              ? err.message
-              : "Couldn't load your orders right now.",
-          )
-      }
-    })
-
-    const { data: sub } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        if (!session) router.replace("/login?next=/account/orders")
-      },
-    )
-
+      })
+      .catch((err: unknown) => {
+        if (!active) return
+        setError(
+          err instanceof Error
+            ? err.message
+            : "Couldn't load your orders right now.",
+        )
+      })
     return () => {
       active = false
-      sub.subscription.unsubscribe()
     }
-  }, [router])
+  }, [authReady])
 
   return (
     <>
@@ -161,7 +144,7 @@ export default function OrdersPage() {
             </motion.div>
 
             <div className="mt-10">
-              {!authChecked ? (
+              {!authReady ? (
                 <Centered>
                   <Loader2 className="mx-auto h-6 w-6 animate-spin text-white/70" />
                   <p className="mt-4 text-sm text-white/70">Loading…</p>

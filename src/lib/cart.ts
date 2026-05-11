@@ -1,7 +1,8 @@
 "use client"
 
-import { useCallback, useEffect, useState } from "react"
+import { useEffect, useState } from "react"
 import { getSupabase } from "@/lib/supabase/client"
+import { useAuth } from "@/lib/auth"
 
 const LOCAL_CART_KEY = "melano:cart"
 const CART_EVENT = "melano:cart-changed"
@@ -174,40 +175,38 @@ export function safeNext(raw: string | null | undefined): string | null {
 // ============================================================
 
 export function useCartCount(): number {
+  const auth = useAuth()
+  const userId = auth.status === "authenticated" ? auth.user.id : null
   const [count, setCount] = useState(0)
 
-  const refresh = useCallback(async () => {
-    if (typeof window === "undefined") return
-    const supabase = getSupabase()
-    const {
-      data: { session },
-    } = await supabase.auth.getSession()
-    const user = session?.user ?? null
-    if (user) {
-      const { data } = await supabase
-        .from("cart_items")
-        .select("quantity")
-      const total = (data ?? []).reduce(
-        (s: number, r: { quantity?: number }) => s + (r.quantity ?? 0),
-        0
-      )
-      setCount(total)
-    } else {
-      const items = readLocalCart()
-      setCount(items.reduce((s, it) => s + it.quantity, 0))
-    }
-  }, [])
-
   useEffect(() => {
-    refresh()
-    const off = onCartChanged(refresh)
-    const supabase = getSupabase()
-    const { data: sub } = supabase.auth.onAuthStateChange(() => refresh())
-    return () => {
-      off()
-      sub.subscription.unsubscribe()
+    if (typeof window === "undefined") return
+    let active = true
+
+    const refresh = async () => {
+      if (userId) {
+        const supabase = getSupabase()
+        const { data } = await supabase.from("cart_items").select("quantity")
+        const total = (data ?? []).reduce(
+          (s: number, r: { quantity?: number }) => s + (r.quantity ?? 0),
+          0,
+        )
+        if (active) setCount(total)
+      } else {
+        const items = readLocalCart()
+        if (active) setCount(items.reduce((s, it) => s + it.quantity, 0))
+      }
     }
-  }, [refresh])
+
+    refresh()
+    const off = onCartChanged(() => {
+      refresh()
+    })
+    return () => {
+      active = false
+      off()
+    }
+  }, [userId])
 
   return count
 }

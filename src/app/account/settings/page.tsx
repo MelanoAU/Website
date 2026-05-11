@@ -1,9 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { useRouter } from "next/navigation"
 import Link from "next/link"
-import type { User } from "@supabase/supabase-js"
 import { motion, cubicBezier } from "framer-motion"
 import {
   ArrowLeft,
@@ -26,6 +24,7 @@ import FixedVideoBackground from "@/components/fixed-video-background"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { getSupabase } from "@/lib/supabase/client"
+import { useRequireAuth } from "@/lib/auth"
 import {
   fetchUserProfile,
   updateUserProfile,
@@ -71,9 +70,10 @@ function Toggle({
 }
 
 export default function SettingsPage() {
-  const router = useRouter()
-  const [user, setUser] = useState<User | null>(null)
-  const [authChecked, setAuthChecked] = useState(false)
+  const auth = useRequireAuth("/account/settings")
+  const user = auth.status === "authenticated" ? auth.user : null
+  const authReady = auth.status === "authenticated"
+
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [displayName, setDisplayName] = useState("")
   const [marketingOptIn, setMarketingOptIn] = useState(true)
@@ -95,41 +95,22 @@ export default function SettingsPage() {
   const [pwError, setPwError] = useState<string | null>(null)
 
   useEffect(() => {
-    const supabase = getSupabase()
+    if (!authReady) return
     let active = true
-
-    supabase.auth.getSession().then(async ({ data }) => {
-      if (!active) return
-      const sessionUser = data.session?.user ?? null
-      if (!sessionUser) {
-        router.replace("/login?next=/account/settings")
-        return
-      }
-      setUser(sessionUser)
-      setAuthChecked(true)
-      try {
-        const p = await fetchUserProfile()
+    fetchUserProfile()
+      .then((p) => {
         if (!active) return
         setProfile(p)
         setDisplayName(p?.display_name ?? "")
         setMarketingOptIn(p?.marketing_opt_in ?? true)
-      } catch {
-        /* ignore */
-      }
-    })
-
-    const { data: sub } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        if (!session) router.replace("/login?next=/account/settings")
-        else setUser(session.user)
-      },
-    )
-
+      })
+      .catch(() => {
+        /* ignore — profile is optional, page still works */
+      })
     return () => {
       active = false
-      sub.subscription.unsubscribe()
     }
-  }, [router])
+  }, [authReady])
 
   async function handleSaveProfile(e: React.FormEvent) {
     e.preventDefault()
@@ -246,7 +227,7 @@ export default function SettingsPage() {
               </h1>
             </motion.div>
 
-            {!authChecked || !user ? (
+            {!authReady || !user ? (
               <div className="mt-10 rounded-2xl bg-white/[0.06] backdrop-blur-md border border-white/10 px-6 py-16 text-center">
                 <Loader2 className="mx-auto h-6 w-6 animate-spin text-white/70" />
                 <p className="mt-4 text-sm text-white/70">Loading…</p>

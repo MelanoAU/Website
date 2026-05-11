@@ -1,7 +1,6 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { motion, cubicBezier } from "framer-motion"
 import {
@@ -22,7 +21,7 @@ import Footer from "@/components/footer"
 import FixedVideoBackground from "@/components/fixed-video-background"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
-import { getSupabase } from "@/lib/supabase/client"
+import { useRequireAuth } from "@/lib/auth"
 import {
   fetchAccountSummary,
   fetchPointsLedger,
@@ -71,52 +70,33 @@ function formatDate(iso: string) {
 }
 
 export default function AccountRewardsPage() {
-  const router = useRouter()
-  const [authChecked, setAuthChecked] = useState(false)
+  const auth = useRequireAuth("/account/rewards")
+  const authReady = auth.status === "authenticated"
   const [summary, setSummary] = useState<AccountSummary | null>(null)
   const [ledger, setLedger] = useState<PointsLedgerRow[] | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    const supabase = getSupabase()
+    if (!authReady) return
     let active = true
-
-    supabase.auth.getSession().then(async ({ data }) => {
-      if (!active) return
-      if (!data.session?.user) {
-        router.replace("/login?next=/account/rewards")
-        return
-      }
-      setAuthChecked(true)
-      try {
-        const [s, l] = await Promise.all([
-          fetchAccountSummary(),
-          fetchPointsLedger(),
-        ])
+    Promise.all([fetchAccountSummary(), fetchPointsLedger()])
+      .then(([s, l]) => {
         if (!active) return
         setSummary(s)
         setLedger(l)
-      } catch (err) {
-        if (active)
-          setError(
-            err instanceof Error
-              ? err.message
-              : "Couldn't load your rewards right now.",
-          )
-      }
-    })
-
-    const { data: sub } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        if (!session) router.replace("/login?next=/account/rewards")
-      },
-    )
-
+      })
+      .catch((err: unknown) => {
+        if (!active) return
+        setError(
+          err instanceof Error
+            ? err.message
+            : "Couldn't load your rewards right now.",
+        )
+      })
     return () => {
       active = false
-      sub.subscription.unsubscribe()
     }
-  }, [router])
+  }, [authReady])
 
   const points = summary?.reward_points ?? 0
   const tierProgress = nextTierProgress(points)
@@ -152,7 +132,7 @@ export default function AccountRewardsPage() {
               </h1>
             </motion.div>
 
-            {!authChecked || (summary === null && !error) ? (
+            {!authReady || (summary === null && !error) ? (
               <div className="mt-10 rounded-2xl bg-white/[0.06] backdrop-blur-md border border-white/10 px-6 py-16 text-center">
                 <Loader2 className="mx-auto h-6 w-6 animate-spin text-white/70" />
                 <p className="mt-4 text-sm text-white/70">Loading…</p>

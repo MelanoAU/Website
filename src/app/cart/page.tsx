@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import type { User } from "@supabase/supabase-js"
 import { motion, AnimatePresence, cubicBezier } from "framer-motion"
 import {
   Trash2,
@@ -21,6 +20,7 @@ import Footer from "@/components/footer"
 import FixedVideoBackground from "@/components/fixed-video-background"
 import { Button } from "@/components/ui/button"
 import ImgFit from "@/components/ImgFit"
+import { useAuth } from "@/lib/auth"
 import { getSupabase } from "@/lib/supabase/client"
 import { fetchActiveProducts } from "@/lib/products"
 import type { NewProduct } from "@/lib/products"
@@ -36,7 +36,7 @@ const easeBezier = cubicBezier(0.22, 1, 0.36, 1)
 
 type DisplayItem = {
   key: string
-  id?: string // present when DB-backed; absent for local
+  id?: string
   product_id: string
   size: string
   quantity: number
@@ -56,7 +56,7 @@ function formatPrice(amount: number) {
 
 function toDisplay(
   item: { id?: string; product_id: string; size: string; quantity: number },
-  productMap: Map<string, NewProduct>
+  productMap: Map<string, NewProduct>,
 ): DisplayItem {
   const product = productMap.get(item.product_id) ?? null
   const unit = product ? parsePrice(product.price) : 0
@@ -74,83 +74,62 @@ function toDisplay(
 
 export default function CartPage() {
   const router = useRouter()
-  const [user, setUser] = useState<User | null>(null)
-  const [authChecked, setAuthChecked] = useState(false)
-  const [loading, setLoading] = useState(true)
+  const auth = useAuth()
+  const userId = auth.status === "authenticated" ? auth.user.id : null
+  const authReady = auth.status !== "loading"
+
   const [items, setItems] = useState<DisplayItem[]>([])
+  const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [busyKey, setBusyKey] = useState<string | null>(null)
 
-  const refresh = useCallback(async (currentUser: User | null) => {
-    setLoading(true)
+  /**
+   * Pull cart contents for the current auth state. Anonymous users
+   * get their local cart, signed-in users get their DB rows.
+   */
+  const refresh = useCallback(async () => {
     setError(null)
-
-    // 拉一份产品目录，按 id 索引；用于把 cart_items / 本地 cart 行
-    // 转成包含 title / image / price 的 DisplayItem
     const productList = await fetchActiveProducts().catch(() => [])
     const productMap = new Map<string, NewProduct>(
-      productList.map((p) => [p.id, p])
+      productList.map((p) => [p.id, p]),
     )
 
-    if (currentUser) {
+    if (userId) {
       const supabase = getSupabase()
       const { data, error: e } = await supabase
         .from("cart_items")
         .select("id, product_id, size, quantity, updated_at")
         .order("updated_at", { ascending: false })
-      setLoading(false)
       if (e) {
         setError(e.message)
-        return
+        setItems([])
+      } else {
+        setItems(
+          (data ?? []).map(
+            (row: {
+              id: string
+              product_id: string
+              size: string
+              quantity: number
+            }) => toDisplay(row, productMap),
+          ),
+        )
       }
-      setItems(
-        (data ?? []).map((row: {
-          id: string
-          product_id: string
-          size: string
-          quantity: number
-        }) => toDisplay(row, productMap))
-      )
     } else {
       setItems(readLocalCart().map((row) => toDisplay(row, productMap)))
-      setLoading(false)
     }
-  }, [])
+    setLoading(false)
+  }, [userId])
 
-  // Initial auth probe + listen for auth / cart changes
+  // Run refresh on auth resolution + whenever the cart-changed event
+  // fires from anywhere else in the app (add-to-cart, sign-in/out merge).
   useEffect(() => {
-    const supabase = getSupabase()
-    let active = true
-
-    supabase.auth.getSession().then(async ({ data }) => {
-      if (!active) return
-      const u = data.session?.user ?? null
-      setUser(u)
-      setAuthChecked(true)
-      await refresh(u)
-    })
-
-    const { data: sub } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        const u = session?.user ?? null
-        setUser(u)
-        refresh(u)
-      }
-    )
-
-    const off = onCartChanged(() => {
-      // 用最新的 user 闭包刷新
-      supabase.auth
-        .getSession()
-        .then(({ data }) => refresh(data.session?.user ?? null))
-    })
-
-    return () => {
-      active = false
-      sub.subscription.unsubscribe()
-      off()
-    }
-  }, [refresh])
+    if (!authReady) return
+    setLoading(true)
+    refresh()
+    const off = onCartChanged(refresh)
+    return off
+  }, [authReady, refresh])
 
   async function updateQty(item: DisplayItem, nextQty: number) {
     const safe = Math.max(1, Math.min(99, nextQty))
@@ -162,8 +141,8 @@ export default function CartPage() {
       cur.map((it) =>
         it.key === item.key
           ? { ...it, quantity: safe, lineTotal: it.unitPrice * safe }
-          : it
-      )
+          : it,
+      ),
     )
 
     if (item.id) {
@@ -211,6 +190,7 @@ export default function CartPage() {
 
   const totalUnits = items.reduce((s, it) => s + it.quantity, 0)
   const subtotal = items.reduce((s, it) => s + it.lineTotal, 0)
+  const showLoading = !authReady || loading
 
   return (
     <>
@@ -219,7 +199,6 @@ export default function CartPage() {
       <main className="relative min-h-[100svh] flex flex-col px-6">
         <div className="h-24 md:h-28" />
 
-        {/* Page header */}
         <div className="mx-auto max-w-6xl w-full pt-6 md:pt-10">
           <motion.div
             initial={{ opacity: 0, y: 24 }}
@@ -230,13 +209,13 @@ export default function CartPage() {
               Your bag
             </span>
             <h1 className="mt-4 text-4xl md:text-6xl font-semibold tracking-tight text-white leading-[1.05]">
-              {!authChecked || loading
+              {showLoading
                 ? "Loading…"
                 : items.length === 0
                   ? "Empty for now."
                   : `${totalUnits} item${totalUnits === 1 ? "" : "s"} ready.`}
             </h1>
-            {items.length > 0 && (
+            {items.length > 0 && !showLoading && (
               <p className="mt-3 text-sm md:text-base text-white/65">
                 Review your selection. Quantities update live.
               </p>
@@ -244,7 +223,6 @@ export default function CartPage() {
           </motion.div>
         </div>
 
-        {/* Body */}
         <div className="mx-auto max-w-6xl w-full pb-24 mt-10 flex-1">
           {error && (
             <div className="mb-6 flex items-start gap-2.5 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-200">
@@ -253,18 +231,15 @@ export default function CartPage() {
             </div>
           )}
 
-          {!authChecked || loading ? (
+          {showLoading ? (
             <CenteredLoader label="Loading your bag…" />
           ) : items.length === 0 ? (
             <EmptyState />
           ) : (
             <>
-              {!user && (
-                <SaveCartHint />
-              )}
+              {!userId && <SaveCartHint />}
 
               <div className="grid gap-10 md:grid-cols-12">
-                {/* Items */}
                 <ul className="md:col-span-7 space-y-4">
                   <AnimatePresence initial={false}>
                     {items.map((it, i) => (
@@ -280,7 +255,6 @@ export default function CartPage() {
                   </AnimatePresence>
                 </ul>
 
-                {/* Summary */}
                 <aside className="md:col-span-5 md:sticky md:top-32 self-start">
                   <SummaryCard
                     subtotal={subtotal}
@@ -399,7 +373,6 @@ function CartRow({
       className="relative overflow-hidden rounded-2xl bg-black/55 backdrop-blur-md border border-white/10"
     >
       <div className="grid grid-cols-[112px_1fr] sm:grid-cols-[140px_1fr] gap-4 sm:gap-5 p-4 sm:p-5">
-        {/* Image */}
         <Link
           href={product ? `/product/${product.id}` : "/shop"}
           className="relative aspect-square overflow-hidden rounded-xl bg-white/[0.04] border border-white/10"
@@ -413,7 +386,6 @@ function CartRow({
           )}
         </Link>
 
-        {/* Info */}
         <div className="min-w-0 flex flex-col">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
@@ -444,7 +416,6 @@ function CartRow({
             </button>
           </div>
 
-          {/* Bottom row: qty stepper + line total */}
           <div className="mt-4 flex items-center justify-between gap-4">
             <div className="inline-flex items-center rounded-full bg-white/[0.06] border border-white/15 overflow-hidden">
               <button
