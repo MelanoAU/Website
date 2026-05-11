@@ -86,7 +86,7 @@ export async function POST(req: Request) {
                 : null,
             subtotal: subtotalCents / 100,
             tax: taxCents / 100,
-            shipping_cost: shippingCents / 100,
+            shipping: shippingCents / 100,
             total: totalCents / 100,
             currency: (session.currency ?? "aud").toUpperCase(),
           })

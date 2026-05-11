@@ -25,6 +25,7 @@
 //     table — the client cannot influence pricing.
 
 import { NextResponse } from "next/server"
+import { randomUUID } from "node:crypto"
 import { createClient } from "@supabase/supabase-js"
 import type Stripe from "stripe"
 import { getStripe, isoForCountry } from "@/lib/stripe"
@@ -217,23 +218,39 @@ export async function POST(req: Request) {
     line_total: it.lineCents / 100,
   }))
 
+  // Schema notes:
+  //   - shipping_address is a single jsonb column (not 7 flat columns)
+  //   - the shipping fee column is named `shipping`, not `shipping_cost`
+  //   - order_number is NOT NULL with no default; we mint one here so
+  //     the row is human-referencable (used on /account & success page)
+  const orderNumber = `MEL-${randomUUID()
+    .replace(/-/g, "")
+    .slice(0, 8)
+    .toUpperCase()}`
+
+  const shippingAddressJson = {
+    name: shipping.name,
+    email: shipping.email,
+    phone: shipping.phone,
+    line1: shipping.address,
+    city: shipping.city,
+    postcode: shipping.postcode,
+    country: shipping.country,
+    country_code: countryIso,
+  }
+
   const { data: orderRow, error: orderErr } = await supabase
     .from("orders")
     .insert({
       user_id: user.id,
+      order_number: orderNumber,
       status: "pending",
       payment_provider: "stripe",
       payment_status: "unpaid",
       currency: CURRENCY.toUpperCase(),
-      shipping_name: shipping.name,
-      shipping_email: shipping.email,
-      shipping_phone: shipping.phone,
-      shipping_address: shipping.address,
-      shipping_city: shipping.city,
-      shipping_postcode: shipping.postcode,
-      shipping_country: shipping.country,
+      shipping_address: shippingAddressJson,
       subtotal: subtotalCents / 100,
-      shipping_cost: shippingCents / 100,
+      shipping: shippingCents / 100,
       tax: 0,
       total: (subtotalCents + shippingCents) / 100,
       items: orderItemsSnapshot,

@@ -39,10 +39,11 @@ const easeBezier = cubicBezier(0.22, 1, 0.36, 1)
 
 type OrderRow = {
   id: string
+  order_number: string | null
   payment_status: string
   total: number
   currency: string
-  shipping_email: string | null
+  shipping_address: { email?: string | null } | null
 }
 
 const POLL_MS = 1500
@@ -83,7 +84,9 @@ function SuccessInner() {
     async function tick() {
       const { data, error: err } = await supabase
         .from("orders")
-        .select("id, payment_status, total, currency, shipping_email")
+        .select(
+          "id, order_number, payment_status, total, currency, shipping_address",
+        )
         .eq("checkout_session_id", sessionId)
         .maybeSingle()
 
@@ -202,7 +205,11 @@ function CenteredLoader({ label }: { label: string }) {
 }
 
 function SuccessCard({ order }: { order: OrderRow }) {
-  const shortId = order.id.slice(0, 8).toUpperCase()
+  // Prefer the human-readable order_number ("MEL-A1B2C3D4"); fall back
+  // to the UUID prefix if for any reason it's missing.
+  const displayNumber =
+    order.order_number ?? order.id.slice(0, 8).toUpperCase()
+  const email = order.shipping_address?.email ?? null
   const totalFmt = new Intl.NumberFormat("en-AU", {
     style: "currency",
     currency: order.currency || "AUD",
@@ -230,12 +237,12 @@ function SuccessCard({ order }: { order: OrderRow }) {
         Thank you.
       </h1>
       <p className="mt-5 text-sm md:text-base text-white/75 leading-relaxed">
-        Order <span className="text-white font-mono">#{shortId}</span> for{" "}
+        Order <span className="text-white font-mono">{displayNumber}</span> for{" "}
         <span className="text-white">{totalFmt}</span>
-        {order.shipping_email ? (
+        {email ? (
           <>
             {" "}— a confirmation has been sent to{" "}
-            <span className="text-white">{order.shipping_email}</span>.
+            <span className="text-white">{email}</span>.
           </>
         ) : (
           "."
@@ -286,7 +293,7 @@ function PendingCard({ order }: { order: OrderRow | null }) {
       </p>
       {order && (
         <p className="mt-3 text-xs text-white/50 font-mono">
-          Reference #{order.id.slice(0, 8).toUpperCase()}
+          Reference {order.order_number ?? order.id.slice(0, 8).toUpperCase()}
         </p>
       )}
       <div className="mt-8">
