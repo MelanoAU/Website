@@ -276,7 +276,15 @@ export default function AccountPage() {
     const { data: sub } = supabase.auth.onAuthStateChange(
       (event, session) => {
         if (settled) return
-        if (event === "USER_UPDATED" && session?.user.phone) {
+        // INITIAL_SESSION fires synchronously on every listener
+        // registration with a snapshot of the current state, not a
+        // real update — ignore it.
+        if (event === "INITIAL_SESSION") return
+        // Don't gate on event type — Supabase JS sometimes emits
+        // SIGNED_IN or TOKEN_REFRESHED instead of USER_UPDATED after
+        // a phone_change verify. The reliable success signal is just
+        // "the user now has a non-empty phone field".
+        if (session?.user.phone && session.user.phone.trim() !== "") {
           settled = true
           sub.subscription.unsubscribe()
           setProviderNotice("Phone number verified and linked.")
