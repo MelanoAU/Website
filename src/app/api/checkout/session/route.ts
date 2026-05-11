@@ -266,6 +266,30 @@ export async function POST(req: Request) {
   }
   const orderId = orderRow.id as string
 
+  // The relational mirror of the items jsonb. /account joins this table
+  // for the line-item view; the jsonb stays as an immutable snapshot
+  // (handy for refunds / disputes after we ever change product titles).
+  const orderItemRows = resolved.map((it) => ({
+    order_id: orderId,
+    product_id: it.productId,
+    product_title: it.title,
+    size: it.size,
+    quantity: it.quantity,
+    unit_price: it.unitCents / 100,
+    line_total: it.lineCents / 100,
+  }))
+
+  const { error: itemsErr } = await supabase
+    .from("order_items")
+    .insert(orderItemRows)
+
+  if (itemsErr) {
+    // Best-effort cleanup so we don't leave a half-created order around.
+    // The webhook can never touch this row (no checkout_session_id yet).
+    await supabase.from("orders").delete().eq("id", orderId)
+    return bad(`Could not save order items: ${itemsErr.message}`, 500)
+  }
+
   // ---------- 5. Stripe Customer + Checkout Session ----------
   const stripe = getStripe()
   const origin = req.headers.get("origin") ?? new URL(req.url).origin
