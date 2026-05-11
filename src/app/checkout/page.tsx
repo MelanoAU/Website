@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState, type FormEvent } from "react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
 import { motion, cubicBezier } from "framer-motion"
 import {
   ShoppingBag,
@@ -10,7 +9,6 @@ import {
   AlertCircle,
   ArrowLeft,
   ArrowRight,
-  CheckCircle2,
   ShieldCheck,
   Truck,
   RefreshCcw,
@@ -25,7 +23,6 @@ import { getSupabase } from "@/lib/supabase/client"
 import { useRequireAuth } from "@/lib/auth"
 import { fetchActiveProducts } from "@/lib/products"
 import type { NewProduct } from "@/lib/products"
-import { emitCartChanged } from "@/lib/cart"
 
 const easeBezier = cubicBezier(0.22, 1, 0.36, 1)
 
@@ -75,9 +72,10 @@ function formatPrice(amount: number) {
 }
 
 export default function CheckoutPage() {
-  const router = useRouter()
   const auth = useRequireAuth("/checkout")
   const user = auth.status === "authenticated" ? auth.user : null
+  const accessToken =
+    auth.status === "authenticated" ? auth.session.access_token : null
   const authReady = auth.status === "authenticated"
 
   const [items, setItems] = useState<CartRow[]>([])
@@ -86,7 +84,6 @@ export default function CheckoutPage() {
   const [form, setForm] = useState<FormState>(INITIAL_FORM)
   const [placing, setPlacing] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [orderId, setOrderId] = useState<string | null>(null)
 
   // Pre-fill email from the signed-in user once we know them.
   useEffect(() => {
@@ -161,7 +158,7 @@ export default function CheckoutPage() {
 
   async function placeOrder(e: FormEvent<HTMLFormElement>) {
     e.preventDefault()
-    if (placing || !user) return
+    if (placing || !user || !accessToken) return
 
     const required: Array<keyof FormState> = [
       "name",
@@ -184,52 +181,50 @@ export default function CheckoutPage() {
     setError(null)
     setPlacing(true)
 
-    const supabase = getSupabase()
-    const orderItems = resolved
-      .filter((it) => it.product)
-      .map((it) => ({
-        product_id: it.product_id,
-        product_title: it.product!.title,
-        product_image: it.product!.image,
-        size: it.size,
-        quantity: it.quantity,
-        unit_price: it.unitPrice,
-        line_total: it.lineTotal,
-      }))
-
-    const { data: orderData, error: orderError } = await supabase
-      .from("orders")
-      .insert({
-        user_id: user.id,
-        status: "pending",
-        shipping_name: form.name.trim(),
-        shipping_email: form.email.trim(),
-        shipping_phone: form.phone.trim() || null,
-        shipping_address: form.address.trim(),
-        shipping_city: form.city.trim(),
-        shipping_postcode: form.postcode.trim(),
-        shipping_country: form.country.trim(),
-        subtotal,
-        shipping_cost: shipping,
-        tax,
-        total,
-        items: orderItems,
+    // Server creates the pending order + the Stripe Checkout Session;
+    // we only ship the shipping snapshot, never the prices/totals — the
+    // server recomputes them from the products table so the buyer can't
+    // tamper with what they're charged.
+    try {
+      const res = await fetch("/api/checkout/session", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          shipping: {
+            name: form.name.trim(),
+            email: form.email.trim(),
+            phone: form.phone.trim() || null,
+            address: form.address.trim(),
+            city: form.city.trim(),
+            postcode: form.postcode.trim(),
+            country: form.country.trim(),
+          },
+        }),
       })
-      .select("id")
-      .single()
 
-    if (orderError || !orderData) {
+      const data = (await res.json().catch(() => ({}))) as {
+        url?: string
+        error?: string
+      }
+
+      if (!res.ok || !data.url) {
+        setPlacing(false)
+        setError(data.error ?? "Could not start checkout. Please try again.")
+        return
+      }
+
+      // Hand off to Stripe's hosted page. The webhook will mark the order
+      // paid and clear the cart once Stripe confirms the charge.
+      window.location.href = data.url
+    } catch (err) {
       setPlacing(false)
-      setError(orderError?.message ?? "Could not place your order.")
-      return
+      setError(
+        err instanceof Error ? err.message : "Could not start checkout.",
+      )
     }
-
-    // 清空 cart_items（订单已经快照保存，cart 不再需要）
-    await supabase.from("cart_items").delete().eq("user_id", user.id)
-    emitCartChanged()
-
-    setOrderId(orderData.id)
-    setPlacing(false)
   }
 
   // ============================================================
@@ -240,14 +235,6 @@ export default function CheckoutPage() {
     return (
       <Shell>
         <CenteredLoader label="Loading…" />
-      </Shell>
-    )
-  }
-
-  if (orderId) {
-    return (
-      <Shell>
-        <SuccessCard orderId={orderId} email={form.email} />
       </Shell>
     )
   }
@@ -408,7 +395,7 @@ export default function CheckoutPage() {
             </div>
           </div>
 
-          {/* Payment placeholder */}
+          {/* Payment — handed off to Stripe's hosted page */}
           <div className="mt-8">
             <span className="block text-[11px] md:text-xs tracking-[0.32em] uppercase text-white/70">
               Payment
@@ -416,15 +403,18 @@ export default function CheckoutPage() {
             <h2 className="mt-3 text-2xl md:text-3xl font-semibold text-white tracking-tight">
               Pay securely.
             </h2>
-            <div className="mt-5 rounded-2xl bg-white/[0.04] backdrop-blur-md border border-white/10 p-6">
+            <div className="mt-5 rounded-2xl bg-white/[0.04] backdrop-blur-md border border-white/10 p-6 space-y-3">
               <div className="flex items-center gap-3 text-white/85">
                 <ShieldCheck className="h-5 w-5 text-brand shrink-0" />
                 <p className="text-sm leading-relaxed">
-                  This is a placeholder checkout. No card is charged. The order
-                  will be saved to your account so you can review it on the
-                  account page.
+                  You&apos;ll be taken to Stripe to complete payment.
+                  Card, Apple&nbsp;Pay, Google&nbsp;Pay, Link, Afterpay
+                  and Zip are all supported.
                 </p>
               </div>
+              <p className="text-[11px] text-white/55 leading-relaxed pl-8">
+                We never see or store your card details.
+              </p>
             </div>
           </div>
         </motion.section>
@@ -482,12 +472,16 @@ export default function CheckoutPage() {
 
             <div className="mt-5 pt-5 border-t border-white/10 flex items-baseline justify-between">
               <span className="text-[11px] tracking-[0.28em] uppercase text-white/60">
-                Total
+                Total (est.)
               </span>
               <span className="text-2xl font-semibold text-white tabular-nums">
                 {formatPrice(total)}
               </span>
             </div>
+            <p className="mt-2 text-[10px] text-white/45 leading-relaxed">
+              Tax is calculated on the next page based on your shipping
+              address. Final total may differ slightly.
+            </p>
 
             <Button
               type="submit"
@@ -497,11 +491,11 @@ export default function CheckoutPage() {
               {placing ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin" />
-                  Placing order…
+                  Redirecting to Stripe…
                 </>
               ) : (
                 <>
-                  Place order
+                  Continue to payment
                   <ArrowRight className="h-4 w-4" />
                 </>
               )}
@@ -622,64 +616,6 @@ function EmptyCheckout() {
             Browse the shop
             <ArrowRight className="h-4 w-4" />
           </Link>
-        </Button>
-      </div>
-    </motion.div>
-  )
-}
-
-function SuccessCard({
-  orderId,
-  email,
-}: {
-  orderId: string
-  email: string
-}) {
-  const shortId = orderId.slice(0, 8).toUpperCase()
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 28 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.7, ease: easeBezier }}
-      className="rounded-2xl bg-black/55 backdrop-blur-md border border-white/10 p-10 md:p-12 text-center max-w-xl mx-auto"
-    >
-      <motion.div
-        initial={{ scale: 0.6, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        transition={{ duration: 0.55, ease: easeBezier }}
-        className="mx-auto inline-flex h-16 w-16 items-center justify-center rounded-full bg-brand/15 ring-1 ring-brand/30 text-brand"
-      >
-        <CheckCircle2 className="h-7 w-7" strokeWidth={1.8} />
-      </motion.div>
-
-      <span className="mt-7 block text-[11px] tracking-[0.32em] uppercase text-brand">
-        Order placed
-      </span>
-      <h1 className="mt-3 text-3xl md:text-5xl font-semibold tracking-tight text-white leading-[1.05]">
-        Thank you.
-      </h1>
-      <p className="mt-5 text-sm md:text-base text-white/75 leading-relaxed">
-        Order <span className="text-white font-mono">#{shortId}</span> is on
-        its way. A confirmation has been sent to{" "}
-        <span className="text-white">{email}</span>.
-      </p>
-
-      <div className="mt-9 flex flex-wrap items-center justify-center gap-3">
-        <Button
-          asChild
-          className="rounded-full h-12 bg-brand text-white px-6 hover:bg-brand/90"
-        >
-          <Link href="/account">
-            View your orders
-            <ArrowRight className="h-4 w-4" />
-          </Link>
-        </Button>
-        <Button
-          asChild
-          variant="outline"
-          className="rounded-full h-12 bg-transparent border-white/30 text-white px-6 hover:bg-white/10 hover:text-white"
-        >
-          <Link href="/shop">Keep shopping</Link>
         </Button>
       </div>
     </motion.div>
