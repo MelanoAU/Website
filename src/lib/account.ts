@@ -222,11 +222,15 @@ export async function verifyPhoneOtp(
   if (error) throw new Error(error.message)
 }
 
-/** Remove the phone from the current user. */
+/**
+ * Remove the phone from the current user. Supabase Auth's public API
+ * doesn't expose a phone-unset (updateUser({ phone: "" }) is silently
+ * a no-op), so we call a SECURITY DEFINER RPC that nulls the columns
+ * on auth.users directly.
+ */
 export async function removePhone(): Promise<void> {
   const supabase = getSupabase()
-  // Supabase doesn't expose a direct "unset phone" — set to empty string.
-  const { error } = await supabase.auth.updateUser({ phone: "" })
+  const { error } = await supabase.rpc("remove_user_phone")
   if (error) throw new Error(error.message)
 }
 

@@ -227,37 +227,72 @@ export default function AccountPage() {
     }, 1500)
   }
 
-  async function handlePhoneVerify() {
+  function handlePhoneVerify() {
     if (!otpInput.trim()) return
     setProviderError(null)
     setBusyProvider("phone")
-    try {
-      await verifyPhoneOtp(phoneInput.trim(), otpInput.trim())
-      setProviderNotice("Phone number verified and linked.")
-      setPhoneEditing(false)
-      setPhoneInput("")
-      setOtpInput("")
-      setOtpStep("phone")
-      // Refresh user object so user.phone updates
-      const { data } = await getSupabase().auth.getSession()
-      if (data.session?.user) setUser(data.session.user)
-      await refreshAccountData()
-    } catch (err) {
+
+    // verifyOtp() suffers the same SDK auth-lock quirk as updateUser()
+    // — the promise can hang even after Supabase has actually accepted
+    // the code and updated the user. Don't gate the UI on the promise.
+    // Instead, treat the USER_UPDATED auth event as the source of truth
+    // for success, the promise rejection as the source of truth for
+    // failure, and a wall-clock timeout as the safety net.
+    let settled = false
+    const supabase = getSupabase()
+
+    const { data: sub } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        if (settled) return
+        if (event === "USER_UPDATED" && session?.user.phone) {
+          settled = true
+          sub.subscription.unsubscribe()
+          setProviderNotice("Phone number verified and linked.")
+          setPhoneEditing(false)
+          setPhoneInput("")
+          setOtpInput("")
+          setOtpStep("phone")
+          setUser(session.user)
+          refreshAccountData()
+          setBusyProvider(null)
+        }
+      },
+    )
+
+    verifyPhoneOtp(phoneInput.trim(), otpInput.trim()).catch(
+      (err: unknown) => {
+        if (settled) return
+        settled = true
+        sub.subscription.unsubscribe()
+        setProviderError(
+          err instanceof Error ? err.message : "That code didn't match.",
+        )
+        setBusyProvider(null)
+      },
+    )
+
+    window.setTimeout(() => {
+      if (settled) return
+      settled = true
+      sub.subscription.unsubscribe()
       setProviderError(
-        err instanceof Error ? err.message : "That code didn't match.",
+        "Verification took too long. The code may still be valid — try again.",
       )
-    } finally {
       setBusyProvider(null)
-    }
+    }, 8000)
   }
 
   async function handlePhoneRemove() {
     if (!window.confirm("Remove your phone number from this account?")) return
+    setProviderError(null)
+    setProviderNotice(null)
     setBusyProvider("phone")
     try {
       await removePhone()
-      const { data } = await getSupabase().auth.getSession()
-      if (data.session?.user) setUser(data.session.user)
+      // The RPC writes auth.users directly, so the local session won't
+      // auto-refresh. Optimistically clear the phone on the in-memory
+      // user object so the row updates immediately.
+      setUser((u) => (u ? ({ ...u, phone: "" } as User) : u))
       setProviderNotice("Phone number removed.")
     } catch (err) {
       setProviderError(
