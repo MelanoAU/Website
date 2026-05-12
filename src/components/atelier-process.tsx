@@ -1,18 +1,19 @@
 "use client"
 
-// The Atelier —— Wheel-driven discrete snap gallery
+// The Atelier —— Wheel-driven discrete snap gallery（带惯性防双跳 + 入场 dwell）
 //
-// 工作原理：
-//   外层 <section> 高度 = N × 100vh —— 给 sticky 内层留出 (N-1)×100vh
-//   的"pin 范围"。但跟之前不同：我们不再把 scroll 进度连续映射到 x，
-//   而是拦截 wheel/touch/键盘事件，每次输入触发一次离散的面板切换，
-//   用 cubic-bezier ease-in-out (渐快渐慢) 在 ~850ms 内动画到下一位置。
+// 关键状态机：
+//   1. 进入 pin range 时：触发 ENTRY_DWELL_MS 的"入场冷却"，吸收任何
+//      正在飞行的 wheel 惯性事件 —— 让用户先看清楚 Step 1。
+//   2. 每个 wheel 事件累加到 deltaY accumulator；达到 NAV_THRESHOLD 才
+//      触发一次面板切换。这一步过滤掉单次小 deltaY 的惯性 tail。
+//   3. 切换触发后立即设 POST_NAV_LOCK_MS 冷却（~1.1s）。trackpad 一次
+//      fling 通常 1-1.5s，这个冷却覆盖了大部分惯性 tail，防止双跳。
+//   4. 冷却期间所有 wheel 都被吸收且 accumulator 清零。
+//   5. 累加器在 150ms 静默后自动重置（识别新手势）。
 //
-//   滚动中我们 preventDefault 锁住页面滚动；只有当用户在第一 / 最后
-//   面板再向边界方向滚时，才会程序化地 window.scrollTo() 平滑跳出
-//   整个 pin range —— 这样用户不需要被动滚 300vh 才能离开本节。
-//
-//   touch 和 ArrowKey/PageDown 同样支持以保持移动端 + 键盘可达性。
+// touch 和键盘走同一份 cooldown 但不需要 accumulator —— 它们本身是离散
+// 事件。键盘按一下 = 一个 nav，cooldown 防止连按双跳。
 
 import { useRef, useState, useEffect, useCallback } from "react"
 import { motion, useMotionValue, animate } from "framer-motion"
@@ -151,29 +152,41 @@ const STEPS: Step[] = [
 
 const N = STEPS.length
 
-// 面板切换的 ease-in-out cubic-bezier —— 渐快渐慢
-// 比 framer-motion 默认更"奢华一档"的曲线
+// 动画
 const PANEL_EASE: [number, number, number, number] = [0.76, 0, 0.24, 1]
 const PANEL_DURATION = 0.85
-const EXIT_LOCK_MS = 900    // 程序化滚出 pin 时锁住 wheel 多久
-const TOUCH_THRESHOLD = 50  // 触屏滑动 >50px 才算一次切换
+
+// 输入节奏（毫秒）
+const ENTRY_DWELL_MS = 700        // 进入 pin 后给 Step 1 的固定停留时间
+const POST_NAV_LOCK_MS = 1100     // 每次切换后吸收 wheel/touch/key 输入（覆盖 trackpad 惯性）
+const EXIT_LOCK_MS = 900          // 程序化滚出 pin 时锁住的时长
+
+// Wheel accumulator
+const WHEEL_NAV_THRESHOLD = 60    // |Σ deltaY| ≥ 此值才触发切换（过滤惯性 tail）
+const WHEEL_RESET_QUIET_MS = 150  // wheel 静默此久后认为是新手势，重置 accumulator
+
+// Touch
+const TOUCH_THRESHOLD = 50
 
 export default function AtelierProcess() {
   const sectionRef = useRef<HTMLElement>(null)
   const [active, setActive] = useState(0)
 
-  // 给事件处理用的 ref 镜像（避免闭包过期）
   const activeRef = useRef(0)
   const isAnimatingRef = useRef(false)
   const isExitingRef = useRef(false)
   const exitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  // 横向位移 motion value —— 单位是"自身宽度的百分比"
-  // 面板 idx 时 x = -(idx/N) × 100%
-  // idx=0: 0% | idx=1: -25% | idx=2: -50% | idx=3: -75%
+  // 共用的输入冷却：entry dwell 和 post-nav lock 都用它
+  const cooldownUntilRef = useRef(0)
+  const wasInPinRef = useRef(false)
+
+  // wheel 专属：累加 deltaY，过滤小幅惯性
+  const wheelAccumRef = useRef(0)
+  const lastWheelTimeRef = useRef(0)
+
   const x = useMotionValue("0%")
 
-  // 动画到目标面板
   const goToPanel = useCallback(
     (idx: number) => {
       const target = Math.max(0, Math.min(N - 1, idx))
@@ -194,7 +207,6 @@ export default function AtelierProcess() {
     [x]
   )
 
-  // 程序化滚出 pin range（边界处用）
   const exitSection = useCallback((direction: "down" | "up") => {
     const section = sectionRef.current
     if (!section) return
@@ -206,8 +218,8 @@ export default function AtelierProcess() {
     const sectionTop = section.offsetTop
     const targetY =
       direction === "down"
-        ? sectionTop + section.offsetHeight - vh + 4 // 刚好滚出 pin
-        : sectionTop - 4 // 刚好滚回 pin 之前
+        ? sectionTop + section.offsetHeight - vh + 4
+        : sectionTop - 4
 
     window.scrollTo({ top: targetY, behavior: "smooth" })
 
@@ -216,7 +228,6 @@ export default function AtelierProcess() {
     }, EXIT_LOCK_MS)
   }, [])
 
-  // 判断当前是否在 pin range 内（section 完整覆盖视口）
   const isInPin = useCallback((): boolean => {
     const section = sectionRef.current
     if (!section) return false
@@ -224,42 +235,92 @@ export default function AtelierProcess() {
     return rect.top <= 0 && rect.bottom >= window.innerHeight
   }, [])
 
-  // ====== Wheel ======
-  useEffect(() => {
-    function handleWheel(e: WheelEvent) {
-      if (!isInPin()) return
-
-      if (isExitingRef.current || isAnimatingRef.current) {
-        e.preventDefault()
-        return
-      }
-
+  // 任何输入触发切换的统一入口
+  const navigate = useCallback(
+    (goingDown: boolean) => {
       const cur = activeRef.current
-      const goingDown = e.deltaY > 0
-
-      // 边界：最后面板 + 向下 → 滚出
       if (cur === N - 1 && goingDown) {
-        e.preventDefault()
         exitSection("down")
         return
       }
-      // 边界：第一面板 + 向上 → 滚回
       if (cur === 0 && !goingDown) {
-        e.preventDefault()
         exitSection("up")
         return
       }
-
-      // 正常：拦截 wheel，切到下一/上一面板
-      e.preventDefault()
       goToPanel(cur + (goingDown ? 1 : -1))
+    },
+    [exitSection, goToPanel]
+  )
+
+  // ====== Scroll listener: 检测 pin 进入，设 entry dwell ======
+  useEffect(() => {
+    function check() {
+      const inPin = isInPin()
+      if (inPin && !wasInPinRef.current) {
+        // 刚进入 pin —— 锁住一段时间让用户看清 Step 1
+        cooldownUntilRef.current = Math.max(
+          cooldownUntilRef.current,
+          performance.now() + ENTRY_DWELL_MS
+        )
+        wheelAccumRef.current = 0
+      } else if (!inPin && wasInPinRef.current) {
+        // 离开 pin —— 清掉残留 accumulator
+        wheelAccumRef.current = 0
+      }
+      wasInPinRef.current = inPin
+    }
+    check()
+    window.addEventListener("scroll", check, { passive: true })
+    return () => window.removeEventListener("scroll", check)
+  }, [isInPin])
+
+  // ====== Wheel（accumulator + cooldown）======
+  useEffect(() => {
+    function handleWheel(e: WheelEvent) {
+      if (!isInPin()) {
+        wheelAccumRef.current = 0
+        return
+      }
+
+      e.preventDefault()
+
+      if (isExitingRef.current) return
+
+      const now = performance.now()
+
+      // 处于冷却期（入场 dwell 或上次切换后的锁）：吸收，不触发
+      if (now < cooldownUntilRef.current) {
+        wheelAccumRef.current = 0
+        lastWheelTimeRef.current = now
+        return
+      }
+
+      // 防御性：动画进行中也不接受新切换
+      if (isAnimatingRef.current) return
+
+      // 手势静默够久 → 新手势开始，重置 accumulator
+      if (now - lastWheelTimeRef.current > WHEEL_RESET_QUIET_MS) {
+        wheelAccumRef.current = 0
+      }
+
+      wheelAccumRef.current += e.deltaY
+      lastWheelTimeRef.current = now
+
+      // 累加未到阈值 —— 继续等
+      if (Math.abs(wheelAccumRef.current) < WHEEL_NAV_THRESHOLD) return
+
+      const goingDown = wheelAccumRef.current > 0
+      wheelAccumRef.current = 0
+      cooldownUntilRef.current = now + POST_NAV_LOCK_MS
+
+      navigate(goingDown)
     }
 
     window.addEventListener("wheel", handleWheel, { passive: false })
     return () => window.removeEventListener("wheel", handleWheel)
-  }, [goToPanel, exitSection, isInPin])
+  }, [navigate, isInPin])
 
-  // ====== Touch（移动端等价 wheel）======
+  // ====== Touch ======
   useEffect(() => {
     let startY = 0
     let startTime = 0
@@ -269,38 +330,26 @@ export default function AtelierProcess() {
       startY = e.touches[0].clientY
       startTime = Date.now()
     }
-
     function onMove(e: TouchEvent) {
       if (!isInPin()) return
-      // 在 pin 中拦截原生竖向滚动
       e.preventDefault()
     }
-
     function onEnd(e: TouchEvent) {
       if (!isInPin()) return
+
+      const now = performance.now()
+      if (now < cooldownUntilRef.current) return
       if (isAnimatingRef.current || isExitingRef.current) return
 
       const endY = e.changedTouches[0].clientY
       const dy = startY - endY
       const dt = Date.now() - startTime
 
-      // 距离够 || 是快速 flick
       const isFlick = Math.abs(dy) > 15 && dt < 250
       if (Math.abs(dy) < TOUCH_THRESHOLD && !isFlick) return
 
-      const cur = activeRef.current
-      const goingDown = dy > 0
-
-      if (cur === N - 1 && goingDown) {
-        exitSection("down")
-        return
-      }
-      if (cur === 0 && !goingDown) {
-        exitSection("up")
-        return
-      }
-
-      goToPanel(cur + (goingDown ? 1 : -1))
+      cooldownUntilRef.current = now + POST_NAV_LOCK_MS
+      navigate(dy > 0)
     }
 
     window.addEventListener("touchstart", onStart, { passive: true })
@@ -312,15 +361,17 @@ export default function AtelierProcess() {
       window.removeEventListener("touchmove", onMove)
       window.removeEventListener("touchend", onEnd)
     }
-  }, [goToPanel, exitSection, isInPin])
+  }, [navigate, isInPin])
 
-  // ====== 键盘（Arrow / PageDown / Space）======
+  // ====== Keyboard ======
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if (!isInPin()) return
+
+      const now = performance.now()
+      if (now < cooldownUntilRef.current) return
       if (isAnimatingRef.current || isExitingRef.current) return
 
-      const cur = activeRef.current
       const isDown =
         e.key === "ArrowDown" ||
         e.key === "PageDown" ||
@@ -329,30 +380,18 @@ export default function AtelierProcess() {
       const isUp =
         e.key === "ArrowUp" || e.key === "PageUp" || e.key === "ArrowLeft"
 
-      if (isDown) {
+      if (isDown || isUp) {
         e.preventDefault()
-        if (cur === N - 1) {
-          exitSection("down")
-        } else {
-          goToPanel(cur + 1)
-        }
-      } else if (isUp) {
-        e.preventDefault()
-        if (cur === 0) {
-          exitSection("up")
-        } else {
-          goToPanel(cur - 1)
-        }
+        cooldownUntilRef.current = now + POST_NAV_LOCK_MS
+        navigate(isDown)
       }
     }
 
     window.addEventListener("keydown", onKey)
     return () => window.removeEventListener("keydown", onKey)
-  }, [goToPanel, exitSection, isInPin])
+  }, [navigate, isInPin])
 
-  // ====== prev / next 按钮 + 圆点 通用导航 ======
-  // 如果用户在 pin 之外点击（例如从 outline 跳过来），先把页面滚到 pin
-  // 起点再切面板。
+  // prev/next 按钮 + 圆点
   const navigateTo = useCallback(
     (idx: number) => {
       const section = sectionRef.current
@@ -440,10 +479,7 @@ export default function AtelierProcess() {
           </div>
         </div>
 
-        {/* ============ 横向 Track 段 ============
-            width: ${N*100}vw 是必须的 —— translateX(%) 是相对元素自身宽度算的，
-            没有显式 width 时 flex 容器默认填父宽 = 100vw，-75% 只走 75vw。
-        */}
+        {/* ============ 横向 Track 段 ============ */}
         <motion.div
           style={{ x, width: `${N * 100}vw` }}
           className="flex flex-1 min-h-0 will-change-transform"
@@ -459,7 +495,6 @@ export default function AtelierProcess() {
               "
             >
               <div className="w-full max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-12 items-center">
-                {/* 文字栏 */}
                 <div>
                   <span className="block font-display italic font-light text-brand text-[88px] md:text-[150px] lg:text-[200px] leading-[0.85]">
                     {num}
@@ -481,7 +516,6 @@ export default function AtelierProcess() {
                   </p>
                 </div>
 
-                {/* SVG 栏 */}
                 <div className="flex justify-center md:justify-end">
                   <div className="text-brand/85 w-[150px] md:w-[240px] lg:w-[300px] aspect-square">
                     <Icon />
@@ -492,7 +526,7 @@ export default function AtelierProcess() {
           ))}
         </motion.div>
 
-        {/* ============ 底部圆点分页 段 ============ */}
+        {/* ============ 圆点分页段 ============ */}
         <div className="shrink-0 relative z-10 pb-8 md:pb-12 pt-2 flex items-center justify-center gap-3">
           {STEPS.map((s, i) => (
             <button
