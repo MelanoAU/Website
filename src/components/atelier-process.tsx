@@ -1,28 +1,21 @@
 "use client"
 
-// The Atelier —— Scroll-jacked horizontal pinned gallery
+// The Atelier —— Wheel-driven discrete snap gallery
 //
 // 工作原理：
-//   外层 <section> 高度 = N × 100vh。
-//   内层 sticky 容器贴在视口顶部，被卡住 (N-1)×100vh 的距离。
-//   在这段被卡住的垂直滚动里，里面的横向 track 用 translateX 从 0% 滚到
-//   -((N-1)/N × 100)%，正好露出最后一个面板。视觉上：用户滚轮向下滚 →
-//   页面不动 → 四个面板从左向右依次进场 → 第四个完成后页面恢复垂直滚动。
+//   外层 <section> 高度 = N × 100vh —— 给 sticky 内层留出 (N-1)×100vh
+//   的"pin 范围"。但跟之前不同：我们不再把 scroll 进度连续映射到 x，
+//   而是拦截 wheel/touch/键盘事件，每次输入触发一次离散的面板切换，
+//   用 cubic-bezier ease-in-out (渐快渐慢) 在 ~850ms 内动画到下一位置。
 //
-// 关键修复（与早期版本对比）：
-//   1. track 必须有显式 width: ${N*100}vw —— 否则 translateX(%) 用的是
-//      flex 容器自身宽度（默认 100vw），算出来只移动 75vw 而不是 300vw
-//   2. sticky 内部用 flex flex-col：header / track(flex-1) / dots 各占
-//      自己的纵向区间 —— 否则内容会 items-center 溢出到 header 上
+//   滚动中我们 preventDefault 锁住页面滚动；只有当用户在第一 / 最后
+//   面板再向边界方向滚时，才会程序化地 window.scrollTo() 平滑跳出
+//   整个 pin range —— 这样用户不需要被动滚 300vh 才能离开本节。
+//
+//   touch 和 ArrowKey/PageDown 同样支持以保持移动端 + 键盘可达性。
 
-import { useRef, useState } from "react"
-import {
-  motion,
-  useScroll,
-  useTransform,
-  useSpring,
-  useMotionValueEvent,
-} from "framer-motion"
+import { useRef, useState, useEffect, useCallback } from "react"
+import { motion, useMotionValue, animate } from "framer-motion"
 import { easeCustom } from "@/lib/motion"
 import { Eyebrow, Hairline } from "@/components/ornaments"
 import { ChevronLeft, ChevronRight } from "lucide-react"
@@ -157,41 +150,222 @@ const STEPS: Step[] = [
 ]
 
 const N = STEPS.length
-const END_PERCENT = -((N - 1) / N) * 100  // 4 panels → -75%
+
+// 面板切换的 ease-in-out cubic-bezier —— 渐快渐慢
+// 比 framer-motion 默认更"奢华一档"的曲线
+const PANEL_EASE: [number, number, number, number] = [0.76, 0, 0.24, 1]
+const PANEL_DURATION = 0.85
+const EXIT_LOCK_MS = 900    // 程序化滚出 pin 时锁住 wheel 多久
+const TOUCH_THRESHOLD = 50  // 触屏滑动 >50px 才算一次切换
 
 export default function AtelierProcess() {
   const sectionRef = useRef<HTMLElement>(null)
   const [active, setActive] = useState(0)
 
-  const { scrollYProgress } = useScroll({
-    target: sectionRef,
-    offset: ["start start", "end end"],
-  })
+  // 给事件处理用的 ref 镜像（避免闭包过期）
+  const activeRef = useRef(0)
+  const isAnimatingRef = useRef(false)
+  const isExitingRef = useRef(false)
+  const exitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  const rawX = useTransform(scrollYProgress, [0, 1], ["0%", `${END_PERCENT}%`])
-  const x = useSpring(rawX, {
-    stiffness: 80,
-    damping: 28,
-    mass: 0.4,
-  })
+  // 横向位移 motion value —— 单位是"自身宽度的百分比"
+  // 面板 idx 时 x = -(idx/N) × 100%
+  // idx=0: 0% | idx=1: -25% | idx=2: -50% | idx=3: -75%
+  const x = useMotionValue("0%")
 
-  useMotionValueEvent(scrollYProgress, "change", (v) => {
-    const idx = Math.min(N - 1, Math.max(0, Math.round(v * (N - 1))))
-    setActive(idx)
-  })
+  // 动画到目标面板
+  const goToPanel = useCallback(
+    (idx: number) => {
+      const target = Math.max(0, Math.min(N - 1, idx))
+      if (target === activeRef.current) return
 
-  function scrollToPanel(i: number) {
-    const el = sectionRef.current
-    if (!el) return
-    const clamped = Math.min(N - 1, Math.max(0, i))
-    const sectionTop = el.getBoundingClientRect().top + window.scrollY
-    const scrollable = el.offsetHeight - window.innerHeight
-    const progress = clamped / (N - 1)
-    window.scrollTo({
-      top: sectionTop + progress * scrollable,
-      behavior: "smooth",
-    })
-  }
+      activeRef.current = target
+      setActive(target)
+      isAnimatingRef.current = true
+
+      const targetPercent = -(target / N) * 100
+      animate(x, `${targetPercent}%`, {
+        duration: PANEL_DURATION,
+        ease: PANEL_EASE,
+      }).then(() => {
+        isAnimatingRef.current = false
+      })
+    },
+    [x]
+  )
+
+  // 程序化滚出 pin range（边界处用）
+  const exitSection = useCallback((direction: "down" | "up") => {
+    const section = sectionRef.current
+    if (!section) return
+
+    isExitingRef.current = true
+    if (exitTimerRef.current) clearTimeout(exitTimerRef.current)
+
+    const vh = window.innerHeight
+    const sectionTop = section.offsetTop
+    const targetY =
+      direction === "down"
+        ? sectionTop + section.offsetHeight - vh + 4 // 刚好滚出 pin
+        : sectionTop - 4 // 刚好滚回 pin 之前
+
+    window.scrollTo({ top: targetY, behavior: "smooth" })
+
+    exitTimerRef.current = setTimeout(() => {
+      isExitingRef.current = false
+    }, EXIT_LOCK_MS)
+  }, [])
+
+  // 判断当前是否在 pin range 内（section 完整覆盖视口）
+  const isInPin = useCallback((): boolean => {
+    const section = sectionRef.current
+    if (!section) return false
+    const rect = section.getBoundingClientRect()
+    return rect.top <= 0 && rect.bottom >= window.innerHeight
+  }, [])
+
+  // ====== Wheel ======
+  useEffect(() => {
+    function handleWheel(e: WheelEvent) {
+      if (!isInPin()) return
+
+      if (isExitingRef.current || isAnimatingRef.current) {
+        e.preventDefault()
+        return
+      }
+
+      const cur = activeRef.current
+      const goingDown = e.deltaY > 0
+
+      // 边界：最后面板 + 向下 → 滚出
+      if (cur === N - 1 && goingDown) {
+        e.preventDefault()
+        exitSection("down")
+        return
+      }
+      // 边界：第一面板 + 向上 → 滚回
+      if (cur === 0 && !goingDown) {
+        e.preventDefault()
+        exitSection("up")
+        return
+      }
+
+      // 正常：拦截 wheel，切到下一/上一面板
+      e.preventDefault()
+      goToPanel(cur + (goingDown ? 1 : -1))
+    }
+
+    window.addEventListener("wheel", handleWheel, { passive: false })
+    return () => window.removeEventListener("wheel", handleWheel)
+  }, [goToPanel, exitSection, isInPin])
+
+  // ====== Touch（移动端等价 wheel）======
+  useEffect(() => {
+    let startY = 0
+    let startTime = 0
+
+    function onStart(e: TouchEvent) {
+      if (!isInPin()) return
+      startY = e.touches[0].clientY
+      startTime = Date.now()
+    }
+
+    function onMove(e: TouchEvent) {
+      if (!isInPin()) return
+      // 在 pin 中拦截原生竖向滚动
+      e.preventDefault()
+    }
+
+    function onEnd(e: TouchEvent) {
+      if (!isInPin()) return
+      if (isAnimatingRef.current || isExitingRef.current) return
+
+      const endY = e.changedTouches[0].clientY
+      const dy = startY - endY
+      const dt = Date.now() - startTime
+
+      // 距离够 || 是快速 flick
+      const isFlick = Math.abs(dy) > 15 && dt < 250
+      if (Math.abs(dy) < TOUCH_THRESHOLD && !isFlick) return
+
+      const cur = activeRef.current
+      const goingDown = dy > 0
+
+      if (cur === N - 1 && goingDown) {
+        exitSection("down")
+        return
+      }
+      if (cur === 0 && !goingDown) {
+        exitSection("up")
+        return
+      }
+
+      goToPanel(cur + (goingDown ? 1 : -1))
+    }
+
+    window.addEventListener("touchstart", onStart, { passive: true })
+    window.addEventListener("touchmove", onMove, { passive: false })
+    window.addEventListener("touchend", onEnd, { passive: true })
+
+    return () => {
+      window.removeEventListener("touchstart", onStart)
+      window.removeEventListener("touchmove", onMove)
+      window.removeEventListener("touchend", onEnd)
+    }
+  }, [goToPanel, exitSection, isInPin])
+
+  // ====== 键盘（Arrow / PageDown / Space）======
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (!isInPin()) return
+      if (isAnimatingRef.current || isExitingRef.current) return
+
+      const cur = activeRef.current
+      const isDown =
+        e.key === "ArrowDown" ||
+        e.key === "PageDown" ||
+        e.key === " " ||
+        e.key === "ArrowRight"
+      const isUp =
+        e.key === "ArrowUp" || e.key === "PageUp" || e.key === "ArrowLeft"
+
+      if (isDown) {
+        e.preventDefault()
+        if (cur === N - 1) {
+          exitSection("down")
+        } else {
+          goToPanel(cur + 1)
+        }
+      } else if (isUp) {
+        e.preventDefault()
+        if (cur === 0) {
+          exitSection("up")
+        } else {
+          goToPanel(cur - 1)
+        }
+      }
+    }
+
+    window.addEventListener("keydown", onKey)
+    return () => window.removeEventListener("keydown", onKey)
+  }, [goToPanel, exitSection, isInPin])
+
+  // ====== prev / next 按钮 + 圆点 通用导航 ======
+  // 如果用户在 pin 之外点击（例如从 outline 跳过来），先把页面滚到 pin
+  // 起点再切面板。
+  const navigateTo = useCallback(
+    (idx: number) => {
+      const section = sectionRef.current
+      if (!section) return
+      if (isInPin()) {
+        goToPanel(idx)
+      } else {
+        window.scrollTo({ top: section.offsetTop, behavior: "smooth" })
+        setTimeout(() => goToPanel(idx), 600)
+      }
+    },
+    [goToPanel, isInPin]
+  )
 
   return (
     <section
@@ -199,13 +373,6 @@ export default function AtelierProcess() {
       className="relative"
       style={{ height: `${N * 100}vh` }}
     >
-      {/*
-        Sticky 容器 —— flex column 把垂直空间切成三段：
-          1. header (shrink-0)
-          2. track  (flex-1) ← 文字内容只能在这块里挤
-          3. dots   (shrink-0)
-        这样内容再也不会溢出到 header 上去。
-      */}
       <div className="sticky top-0 h-screen overflow-hidden flex flex-col">
         {/* ============ Header 段 ============ */}
         <div className="shrink-0 relative z-10 px-6 md:px-12 pt-28 md:pt-32 pb-4 md:pb-6">
@@ -236,7 +403,7 @@ export default function AtelierProcess() {
               <div className="hidden md:flex items-center gap-3 pb-2">
                 <button
                   type="button"
-                  onClick={() => scrollToPanel(active - 1)}
+                  onClick={() => navigateTo(active - 1)}
                   disabled={active === 0}
                   aria-label="Previous step"
                   className="
@@ -253,7 +420,7 @@ export default function AtelierProcess() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => scrollToPanel(active + 1)}
+                  onClick={() => navigateTo(active + 1)}
                   disabled={active === N - 1}
                   aria-label="Next step"
                   className="
@@ -274,9 +441,8 @@ export default function AtelierProcess() {
         </div>
 
         {/* ============ 横向 Track 段 ============
-            关键：显式 width = N*100vw —— 否则 translateX(%) 算的是
-            元素自身的 100vw（flex container 默认填充父宽），结果只移动
-            -75vw 而不是 -300vw。
+            width: ${N*100}vw 是必须的 —— translateX(%) 是相对元素自身宽度算的，
+            没有显式 width 时 flex 容器默认填父宽 = 100vw，-75% 只走 75vw。
         */}
         <motion.div
           style={{ x, width: `${N * 100}vw` }}
@@ -295,7 +461,7 @@ export default function AtelierProcess() {
               <div className="w-full max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-12 items-center">
                 {/* 文字栏 */}
                 <div>
-                  <span className="block font-display italic font-light text-brand text-[72px] md:text-[120px] lg:text-[160px] leading-[0.85]">
+                  <span className="block font-display italic font-light text-brand text-[88px] md:text-[150px] lg:text-[200px] leading-[0.85]">
                     {num}
                   </span>
                   <span className="block mt-2 text-[10px] md:text-[11px] tracking-[0.3em] uppercase text-white/65">
@@ -304,20 +470,20 @@ export default function AtelierProcess() {
 
                   <Hairline width={48} delay={0.2} className="mt-5" />
 
-                  <h3 className="mt-6 font-display italic font-light text-[36px] md:text-[56px] lg:text-[72px] leading-[0.95] tracking-tight text-white">
+                  <h3 className="mt-6 font-display italic font-light text-[42px] md:text-[64px] lg:text-[84px] leading-[0.95] tracking-tight text-white">
                     {title}
                   </h3>
                   <p className="mt-2 font-display italic text-[13px] md:text-[15px] text-white/65 tracking-wide">
                     {caption}
                   </p>
-                  <p className="mt-5 font-display text-white/80 text-[15px] md:text-[17px] leading-[1.6] max-w-md">
+                  <p className="mt-5 font-display text-white/80 text-[15px] md:text-[18px] leading-[1.6] max-w-md">
                     {body}
                   </p>
                 </div>
 
                 {/* SVG 栏 */}
                 <div className="flex justify-center md:justify-end">
-                  <div className="text-brand/85 w-[140px] md:w-[220px] lg:w-[280px] aspect-square">
+                  <div className="text-brand/85 w-[150px] md:w-[240px] lg:w-[300px] aspect-square">
                     <Icon />
                   </div>
                 </div>
@@ -332,7 +498,7 @@ export default function AtelierProcess() {
             <button
               key={s.num}
               type="button"
-              onClick={() => scrollToPanel(i)}
+              onClick={() => navigateTo(i)}
               aria-label={`Go to step ${i + 1}`}
               className={`
                 h-1.5 rounded-full transition-all duration-500
