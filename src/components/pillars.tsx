@@ -59,23 +59,17 @@ export default function Pillars() {
                 key={title}
                 {...anim}
                 whileHover={{ y: -6 }}
-                transition={{
-                  ...anim.transition,
-                  // hover 用更短的过渡，覆盖父 transition
-                }}
+                transition={{ ...anim.transition }}
                 className="
                   group relative rounded-2xl
-                  bg-white/[0.04] backdrop-blur-md
-                  border border-white/10
-                  hover:bg-white/[0.07] hover:border-brand/30
-                  transition-colors duration-500
+                  panel-solid
                   p-8 md:p-10
                   flex flex-col
                 "
               >
-                {/* 顶部：大号衬线编号 + 细线 */}
+                {/* 顶部：大号衬线编号（白色，避免与背景套色） + 图标 */}
                 <div className="flex items-start justify-between gap-4">
-                  <span className="font-display italic text-5xl md:text-6xl text-brand/85 leading-none">
+                  <span className="font-display italic text-5xl md:text-6xl text-white leading-none">
                     {number}
                   </span>
                   <Icon

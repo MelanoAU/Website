@@ -139,7 +139,8 @@ export function ChapterMark({
         align === "center" ? "justify-center" : ""
       }`}
     >
-      <span className="font-display italic text-4xl md:text-5xl text-brand/85 leading-none">
+      {/* 章节编号 — 用纯白避免 sage 在深色背景上对比度不足 */}
+      <span className="font-display italic text-4xl md:text-5xl text-white leading-none">
         {number}
       </span>
       <div className="flex flex-col gap-2">

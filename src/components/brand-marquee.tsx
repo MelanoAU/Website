@@ -23,15 +23,16 @@ function Row({ ariaHidden = false }: { ariaHidden?: boolean }) {
   return (
     <div
       aria-hidden={ariaHidden || undefined}
-      className="flex shrink-0 items-center gap-10 md:gap-14 px-5 md:px-7"
+      className="flex shrink-0 items-center gap-7 md:gap-10 px-4 md:px-6"
     >
       {KEYWORDS.map((kw) => (
-        <span key={kw} className="inline-flex items-center gap-10 md:gap-14">
-          <span className="font-display italic font-medium text-[34px] md:text-[56px] leading-none text-white/85">
+        <span key={kw} className="inline-flex items-center gap-7 md:gap-10">
+          {/* 字号砍掉约一半，更像 editorial ticker 而不是 hero 大字 */}
+          <span className="font-display italic font-medium text-[22px] md:text-[34px] leading-none text-white/85">
             {kw}
           </span>
           <Leaf
-            className="h-4 w-4 md:h-5 md:w-5 text-brand shrink-0"
+            className="h-3.5 w-3.5 md:h-4 md:w-4 text-brand shrink-0"
             strokeWidth={1.6}
             aria-hidden
           />
@@ -47,19 +48,26 @@ export default function BrandMarquee() {
       aria-label="Brand values"
       className="
         relative overflow-hidden
-        py-10 md:py-14
-        border-y border-white/10
-        bg-black/55 backdrop-blur-md
+        py-5 md:py-7
+        panel-marquee
       "
     >
-      {/* 左右羽化遮罩 — 让滚动消失在边缘，更高级 */}
+      {/* 左右羽化遮罩 — 实色背景下用纯 #050505 渐变，更干净 */}
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-y-0 left-0 w-24 md:w-40 z-10 bg-gradient-to-r from-black/90 to-transparent"
+        className="pointer-events-none absolute inset-y-0 left-0 w-20 md:w-32 z-10"
+        style={{
+          background:
+            "linear-gradient(to right, #050505 0%, rgba(5,5,5,0.85) 50%, rgba(5,5,5,0) 100%)",
+        }}
       />
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-y-0 right-0 w-24 md:w-40 z-10 bg-gradient-to-l from-black/90 to-transparent"
+        className="pointer-events-none absolute inset-y-0 right-0 w-20 md:w-32 z-10"
+        style={{
+          background:
+            "linear-gradient(to left, #050505 0%, rgba(5,5,5,0.85) 50%, rgba(5,5,5,0) 100%)",
+        }}
       />
 
       <div className="flex w-max animate-marquee">

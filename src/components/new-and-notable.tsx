@@ -34,9 +34,7 @@ function ProductCard({
       ref={ref}
       className="
         h-full flex flex-col rounded-2xl
-        bg-white/[0.04] border border-white/10
-        hover:bg-white/[0.07] hover:border-brand/30
-        transition-colors duration-500
+        panel-solid
         p-6
       "
     >
@@ -91,10 +89,10 @@ export default function NewAndNotable({ products }: { products: NewProduct[] }) 
 
   return (
     <section className="relative px-6 py-28">
-      {/* 背景卡：更深更厚实 */}
+      {/* 背景卡：实色奢华面板（替代 backdrop-blur 玻璃效果） */}
       <div
         aria-hidden
-        className="hidden md:block absolute inset-x-0 inset-y-10 mx-auto max-w-7xl rounded-3xl bg-black/65 backdrop-blur-md border border-white/10"
+        className="hidden md:block absolute inset-x-0 inset-y-10 mx-auto max-w-7xl rounded-3xl panel-solid-wide"
       />
       <div className="relative mx-auto max-w-6xl">
         {/* 章节编号 03 — 居中布局 */}
@@ -128,7 +126,7 @@ export default function NewAndNotable({ products }: { products: NewProduct[] }) 
             <motion.li
               key={p.id}
               {...revealUp(i * 0.08, 0.75)}
-              className="overflow-hidden rounded-2xl bg-black/55 backdrop-blur-md border border-white/10"
+              className="overflow-hidden rounded-2xl panel-solid"
             >
               <Link
                 href={`/product/${p.id}`}
