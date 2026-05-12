@@ -24,7 +24,7 @@ export default function Mission() {
         {/* Eyebrow + 细线 */}
         <div className="flex items-center gap-4 text-white/70">
           <Hairline width={32} />
-          <Eyebrow>A letter from the atelier</Eyebrow>
+          <Eyebrow>From the atelier · Melbourne</Eyebrow>
         </div>
 
         {/* 第一句：作为大标题，衬线斜体大字 */}
@@ -42,8 +42,9 @@ export default function Mission() {
             text-white
           "
         >
-          When my grandmother taught me to crush eucalyptus between two stones,
-          she didn&apos;t call it skincare.
+          The botany of Australia&apos;s southeast is older than the cities
+          above it — and far better catalogued than the cosmetic industry
+          has been quick to notice.
         </motion.p>
 
         {/* 正文段落 */}
@@ -62,18 +63,24 @@ export default function Mission() {
           "
         >
           <p>
-            She called it Sunday. A small ritual of patience and place — a
-            granddaughter, two stones, and a sun still low in the gum trees.
+            From the Yarra catchment to the mountain ash forests of the
+            Dandenongs, Victoria sits at the meeting of two botanical
+            kingdoms — dry-country mallee to the west, wet forests to the
+            east. Melano is a study of the plants that grow at their meeting,
+            written for hair, scalp, and the routines that surround them.
           </p>
           <p>
-            Melano was born from that hour. Every bottle that leaves our
-            atelier is made in small batches, with botanicals grown within a
-            day&apos;s drive of where we sit now. We work slowly, because skin
-            is slow.
+            Our preparations are formulated around native materia and
+            structured around restraint. The library is short on purpose:
+            each bar leads with a single botanical, supported by the few
+            cleansing and conditioning agents that actually contribute to
+            the formulation. No sulfates, no silicones, no
+            parabens, no synthetic fragrance.
           </p>
           <p>
-            If you find a moment of stillness in our formulas — we&apos;ll have
-            done our job.
+            If our preparations find a place in your morning — and your
+            routine feels a little more rooted in where you live — we&apos;ll
+            consider the work done.
           </p>
         </motion.div>
 
@@ -90,10 +97,10 @@ export default function Mission() {
             className="font-display italic text-white text-[44px] md:text-[60px] leading-none tracking-tight"
             style={{ transform: "skewX(-6deg)" }}
           >
-            Anna
+            Melano
           </p>
           <p className="mt-4 text-sm text-white/65 tracking-wide">
-            Anna Mörel · Founder
+            Melbourne · mmxxvi
           </p>
         </motion.div>
       </div>

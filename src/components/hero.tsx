@@ -21,7 +21,7 @@ export default function Hero() {
         >
           <Hairline width={40} delay={0.6} />
           <span className="text-[10px] md:text-[11px] tracking-[0.36em] uppercase">
-            Sydney · est. mmxxv
+            Melbourne · est. mmxxvi
           </span>
           <Hairline width={40} delay={0.6} />
         </motion.div>
@@ -57,8 +57,8 @@ export default function Hero() {
             max-w-2xl mx-auto
           "
         >
-          An apothecary of small-batch botanicals,
-          <br className="hidden md:block" /> made by hand.
+          Considered preparations,
+          <br className="hidden md:block" /> drawn from native Australian botany.
         </motion.p>
 
         {/* 底部小字标 —— 单一 italic 链接，奢华品牌的克制 CTA */}
@@ -81,7 +81,7 @@ export default function Hero() {
               pb-1
             "
           >
-            Discover the collection
+            View the preparations
           </a>
         </motion.div>
       </div>

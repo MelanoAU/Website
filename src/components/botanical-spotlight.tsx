@@ -7,10 +7,10 @@ import { easeCustom, revealUp } from "@/lib/motion"
 import { Eyebrow, EucalyptusBranch, Hairline } from "@/components/ornaments"
 
 const FACTS = [
-  { label: "Native to", value: "New South Wales wetlands" },
-  { label: "Harvested at", value: "First light, by hand" },
-  { label: "Pressed within", value: "12 hours of harvest" },
-  { label: "Bottled in", value: "Surry Hills, Sydney" },
+  { label: "Sourced from", value: "Eastern Victoria · Tasmania" },
+  { label: "Approach", value: "Single-plant compositions" },
+  { label: "Formulated in", value: "Melbourne, Victoria" },
+  { label: "Free of", value: "Sulfates, silicones, parabens" },
 ]
 
 export default function BotanicalSpotlight() {
@@ -21,7 +21,7 @@ export default function BotanicalSpotlight() {
         <div className="md:pt-16">
           <div className="flex items-center gap-4 text-white/70">
             <Hairline width={32} />
-            <Eyebrow>Featured Botanical</Eyebrow>
+            <Eyebrow>On native materia</Eyebrow>
           </div>
 
           <motion.h2
@@ -35,7 +35,7 @@ export default function BotanicalSpotlight() {
               text-white
             "
           >
-            Tea Tree.
+            Native materia.
           </motion.h2>
 
           <motion.p
@@ -48,7 +48,7 @@ export default function BotanicalSpotlight() {
               text-brand
             "
           >
-            A long history in a small leaf.
+            A library of southeast Australian botany, read closely.
           </motion.p>
 
           <motion.p
@@ -62,10 +62,13 @@ export default function BotanicalSpotlight() {
               max-w-md
             "
           >
-            Native to the wetlands of New South Wales, the tea tree&apos;s
-            leaves carry over three hundred recorded benefits — most of which
-            we still don&apos;t fully understand. We cold-press at dawn, when
-            the oils are still wet with night dew.
+            Australia carries a botanical inheritance distinct from the
+            European materia that built most of cosmetic history. Our
+            preparations are written from these plants — eastern Victorian
+            wattles, Tasmanian peppers, the alpine kunzeas of the Great
+            Dividing Range — selected for documented efficacy, traceable
+            origin, and a quality of fragrance the synthetic perfume
+            industry has yet to convincingly replicate.
           </motion.p>
 
           <motion.ul

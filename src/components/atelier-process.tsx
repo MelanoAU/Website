@@ -128,30 +128,30 @@ function SealIcon() {
 const STEPS: Step[] = [
   {
     num: "I",
-    title: "Harvest",
-    caption: "Northern Rivers · Sunrise",
-    body: "Leaves are hand-cut between first light and the morning's first heat — when the essential oils still rest in the surface cells.",
+    title: "Source",
+    caption: "Eastern Victoria · Tasmania",
+    body: "Our materia is drawn from the southeast — the Yarra catchment, the cool-climate forests of central Tasmania, the Otway ranges. Plants are chosen for documented use, traceable origin, and resistance to commodity substitution.",
     icon: LeafIcon,
   },
   {
     num: "II",
-    title: "Press",
-    caption: "Atelier · Surry Hills",
-    body: "Cold-pressed within twelve hours of harvest. No solvents, no heat — only weight, time, and the slow patience of stone.",
+    title: "Study",
+    caption: "Provenance · Documented use",
+    body: "Each candidate plant is read against its written record — ethnobotanical history, contemporary research, supply-chain legibility. Most never reach formulation. The library is intentionally narrow.",
     icon: StoneIcon,
   },
   {
     num: "III",
-    title: "Pour",
-    caption: "By hand · In small batches",
-    body: "Each bottle is filled, weighed, and labelled by a single pair of hands. We never produce more than the season allows.",
+    title: "Formulate",
+    caption: "Restraint · Single-plant compositions",
+    body: "Each preparation is composed around one botanical, supported by the short list of cleansing and conditioning agents that actually contribute. No sulfates, no silicones, no parabens, no synthetic fragrance.",
     icon: DropIcon,
   },
   {
     num: "IV",
-    title: "Seal",
-    caption: "Wax · Ribbon · Card",
-    body: "Sealed with beeswax and tied with a hand-written note. The final step is the one we take the most care over.",
+    title: "Carry",
+    caption: "Daily · Considered",
+    body: "A preparation enters the daily routine as something to be used, not displayed. Each bar is designed to disappear into the rhythm of the morning — quietly, without ceremony, for the years it's meant to serve.",
     icon: SealIcon,
   },
 ]
@@ -577,7 +577,7 @@ export default function AtelierProcess() {
           <div className="mx-auto max-w-6xl">
             <div className="flex items-center gap-4 text-white/70">
               <Hairline width={32} />
-              <Eyebrow>The Atelier · Four Hands</Eyebrow>
+              <Eyebrow>The Atelier · Method</Eyebrow>
             </div>
 
             <div className="mt-4 md:mt-5 flex items-end justify-between gap-6">
@@ -595,7 +595,7 @@ export default function AtelierProcess() {
                   max-w-xl
                 "
               >
-                <span className="italic">How</span> a bottle is made.
+                From <span className="italic">plant</span> to preparation.
               </motion.h2>
 
               <div className="hidden md:flex items-center gap-3 pb-2">

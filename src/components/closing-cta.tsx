@@ -41,7 +41,7 @@ export default function ClosingCta() {
           max-w-4xl mx-auto
         "
       >
-        Made by hand.
+        Of Melbourne.
       </motion.h2>
 
       <motion.p
@@ -58,7 +58,8 @@ export default function ClosingCta() {
           max-w-md mx-auto
         "
       >
-        From a small atelier in Sydney, with patience and place.
+        Formulated in Melbourne, addressed to the people who live among
+        these plants.
       </motion.p>
 
       <motion.div

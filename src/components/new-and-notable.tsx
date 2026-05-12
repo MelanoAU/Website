@@ -121,7 +121,7 @@ export default function NewAndNotable({ products }: { products: NewProduct[] }) 
         <div className="text-center">
           <div className="inline-flex items-center gap-4 text-white/70">
             <Hairline width={32} />
-            <Eyebrow>The Edit · Spring</Eyebrow>
+            <Eyebrow>The Edit · Hair</Eyebrow>
             <Hairline width={32} />
           </div>
 
@@ -139,7 +139,7 @@ export default function NewAndNotable({ products }: { products: NewProduct[] }) 
               text-white
             "
           >
-            Three rituals.
+            Three preparations.
           </motion.h2>
 
           <motion.p
@@ -156,8 +156,8 @@ export default function NewAndNotable({ products }: { products: NewProduct[] }) 
               max-w-xl mx-auto
             "
           >
-            A short edit of what we&apos;re pressing this season — formulations
-            we&apos;d gift to our closest friends.
+            Each composed around a single native plant, formulated in
+            Melbourne for daily use.
           </motion.p>
         </div>
 
