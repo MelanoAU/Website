@@ -1,135 +1,126 @@
 "use client"
 
-import { motion } from "framer-motion"
-import { Button } from "@/components/ui/button"
-import { ArrowRight, ChevronDown } from "lucide-react"
-import Link from "next/link"
-import {
-  easeCustom,
-  fadeUp,
-  staggerContainer,
-  letter,
-} from "@/lib/motion"
+// Atelier Hero —— 编辑式 wordmark + 一行注脚 + 极小 scroll 指示
+// 无视频、无按钮、无章节号。让品牌名字本身承担全部重量。
 
-// 逐字符 stagger — 把字符串拆成 inline-block span，每个字符依次浮现
-function StaggeredText({
-  text,
-  delay = 0,
-  className = "",
-  charDelay = 0.04,
-}: {
-  text: string
-  delay?: number
-  className?: string
-  charDelay?: number
-}) {
-  return (
-    <motion.span
-      variants={staggerContainer(charDelay, delay)}
-      initial="hidden"
-      animate="visible"
-      className={`inline-block ${className}`}
-      aria-label={text}
-    >
-      {Array.from(text).map((char, i) => (
-        <motion.span
-          key={i}
-          variants={letter}
-          aria-hidden
-          className="inline-block whitespace-pre"
-        >
-          {char}
-        </motion.span>
-      ))}
-    </motion.span>
-  )
-}
+import { motion } from "framer-motion"
+import { easeCustom } from "@/lib/motion"
+import { Hairline } from "@/components/ornaments"
 
 export default function Hero() {
   return (
-    <section className="relative h-screen md:h-[100svh] flex items-center justify-center px-6 text-center">
-      <div className="relative z-10 mx-auto max-w-3xl">
-        {/* Vol. 装饰标 — 编辑式标题，两侧细线居中 */}
+    <section className="relative min-h-screen flex flex-col items-center justify-center px-6 text-charcoal overflow-hidden">
+      {/* 顶部暖炭→纸色渐变：给 fixed 深色 header 一个可以呼吸的暗带，
+          header 的白字不至于在 cream 上洗成隐形 */}
+      <div
+        aria-hidden
+        className="absolute inset-x-0 top-0 h-48 z-[1] pointer-events-none"
+        style={{
+          background:
+            "linear-gradient(to bottom, #0D0D0D 0%, rgba(31,26,18,0.55) 40%, rgba(239,231,214,0) 100%)",
+        }}
+      />
+
+      {/* 中心 vignette —— 让边缘略暗，纸的光晕感 */}
+      <div
+        aria-hidden
+        className="absolute inset-0 pointer-events-none z-[2]"
+        style={{
+          background:
+            "radial-gradient(ellipse at center, rgba(239,231,214,0) 40%, rgba(95,80,55,0.18) 100%)",
+        }}
+      />
+
+      <div className="relative z-10 max-w-5xl mx-auto text-center">
+        {/* 顶部小字 */}
         <motion.div
-          {...fadeUp(0)}
-          className="flex items-center justify-center gap-4 mb-6"
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 1.4, delay: 0.4, ease: easeCustom }}
+          className="flex items-center justify-center gap-4 text-warm-grey"
         >
-          <span aria-hidden className="h-px w-10 md:w-14 bg-white/40" />
-          <span className="font-display italic text-sm md:text-base text-white/75 tracking-wide">
-            Vol. 01 — The Glow Edition
+          <Hairline width={40} delay={0.6} color="rgba(91,79,61,0.5)" />
+          <span className="text-[10px] md:text-[11px] tracking-[0.36em] uppercase">
+            Sydney · est. mmxxv
           </span>
-          <span aria-hidden className="h-px w-10 md:w-14 bg-white/40" />
+          <Hairline width={40} delay={0.6} color="rgba(91,79,61,0.5)" />
         </motion.div>
 
-        <motion.span
-          {...fadeUp(0.1)}
-          className="block text-[11px] md:text-xs tracking-[0.4em] uppercase text-white/65"
+        {/* 巨型 wordmark —— 衬线斜体，承担整个 hero 的视觉重量 */}
+        <motion.h1
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 2, delay: 0.7, ease: easeCustom }}
+          className="
+            mt-10 md:mt-12
+            font-display italic font-light
+            text-charcoal
+            leading-[0.95] tracking-[-0.02em]
+            text-[88px] sm:text-[140px] md:text-[200px] lg:text-[260px]
+          "
         >
-          Premium Organic Cosmetics
-        </motion.span>
+          Melano
+        </motion.h1>
 
-        {/* H1 — 衬线 + 逐字符浮现。两行分别 stagger 以保持节奏 */}
-        <h1 className="mt-6 font-display font-medium tracking-tight text-white leading-[1.02] text-[64px] md:text-[112px]">
-          <StaggeredText
-            text="Glow Naturally"
-            delay={0.25}
-            charDelay={0.045}
-            className="italic"
-          />
-          <br className="hidden md:block" />
-          <span className="md:hidden"> </span>
-          <StaggeredText
-            text="with Melano"
-            delay={0.9}
-            charDelay={0.04}
-          />
-        </h1>
-
+        {/* 一行 tagline —— 衬线非斜体，克制 */}
         <motion.p
-          {...fadeUp(1.55)}
-          className="mt-8 text-base md:text-lg text-white/85 max-w-xl mx-auto leading-relaxed"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 1.6, delay: 1.4, ease: easeCustom }}
+          className="
+            mt-8 md:mt-10
+            font-display
+            text-charcoal/85
+            text-xl md:text-2xl lg:text-[28px]
+            leading-snug
+            tracking-tight
+            max-w-2xl mx-auto
+          "
         >
-          Hand-crafted, plant-based formulas designed to nourish skin and hair —
-          rooted in nature, made to last.
+          An apothecary of small-batch botanicals,
+          <br className="hidden md:block" /> made by hand.
         </motion.p>
 
-        <motion.div {...fadeUp(1.7)} className="mt-10">
-          <div className="inline-block border border-white/80 p-1 md:p-1.5">
-            <Button
-              asChild
-              className="
-                group rounded-full bg-brand text-white
-                font-semibold text-base
-                px-7 md:px-8 py-3 md:py-3.5
-                transition-all
-                focus-visible:outline-none
-                focus-visible:ring-2 focus-visible:ring-brand/70
-                focus-visible:ring-offset-2 focus-visible:ring-offset-black
-              "
-            >
-              <Link href="/shop">
-                Shop Now
-                <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-0.5" />
-              </Link>
-            </Button>
-          </div>
+        {/* 底部小字标 —— 单一 italic 链接，奢华品牌的克制 CTA */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 1.2, delay: 2.1, ease: easeCustom }}
+          className="mt-14 md:mt-16"
+        >
+          <a
+            href="/shop"
+            className="
+              inline-block
+              font-display italic
+              text-charcoal/80 hover:text-deep-sage
+              text-base md:text-lg
+              tracking-wide
+              transition-colors duration-500
+              border-b border-charcoal/40 hover:border-deep-sage
+              pb-1
+            "
+          >
+            Discover the collection
+          </a>
         </motion.div>
       </div>
 
-      {/* Scroll indicator — 保持原有的微弹 */}
+      {/* Scroll 指示 —— 极小 italic */}
       <motion.div
-        initial={{ opacity: 0, y: -8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.8, delay: 2.1, ease: easeCustom }}
-        className="absolute bottom-8 left-1/2 -translate-x-1/2 z-10 flex flex-col items-center gap-2 text-white/70"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 1.5, delay: 2.4, ease: easeCustom }}
+        className="absolute bottom-10 left-1/2 -translate-x-1/2 z-10 flex flex-col items-center gap-3 text-warm-grey"
       >
-        <span className="text-[10px] tracking-[0.3em] uppercase">Scroll</span>
-        <motion.div
-          animate={{ y: [0, 6, 0] }}
-          transition={{ duration: 1.8, repeat: Infinity, ease: "easeInOut" }}
-        >
-          <ChevronDown className="h-4 w-4" />
-        </motion.div>
+        <span className="font-display italic text-xs tracking-wide">scroll</span>
+        <motion.span
+          aria-hidden
+          animate={{ scaleY: [0, 1, 0] }}
+          style={{ transformOrigin: "top" }}
+          transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }}
+          className="block w-px h-10 bg-warm-grey/50"
+        />
       </motion.div>
     </section>
   )

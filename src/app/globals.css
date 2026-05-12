@@ -146,9 +146,9 @@ select option:checked {
 }
 
 /* ============================================================
-   全站极淡颗粒纹理（natural luxury 触感）
-   - 固定层，pointer-events:none，不影响交互
-   - 用 SVG turbulence 噪声，零图片请求
+   颗粒纹理 —
+   - 站点深色页面：白色噪点，叠在黑底上像电影颗粒
+   - 主页 cream 背景：用 .atelier-grain 切到深色噪点，像纸纤维
    ============================================================ */
 body::after {
   content: "";
@@ -162,31 +162,8 @@ body::after {
 }
 
 /* ============================================================
-   横向 marquee 关键帧 — 无限横滚关键词带
-   - 内容渲染两份，translateX(-50%) 即正好一份宽度
-   - 尊重用户的减少动效偏好
-   ============================================================ */
-@keyframes marquee {
-  from {
-    transform: translate3d(0, 0, 0);
-  }
-  to {
-    transform: translate3d(-50%, 0, 0);
-  }
-}
-.animate-marquee {
-  animation: marquee 50s linear infinite;
-  will-change: transform;
-}
-@media (prefers-reduced-motion: reduce) {
-  .animate-marquee {
-    animation: none;
-  }
-}
-
-/* ============================================================
    衬线显示字体工具类
-   - font-display 用于大标题，传达品牌自然奢华气质
+   - font-display 用于大标题，传达品牌奢华气质
    ============================================================ */
 .font-display {
   font-family: var(--font-display);
@@ -194,54 +171,32 @@ body::after {
 }
 
 /* ============================================================
-   实色奢华面板 — 替代 backdrop-blur 玻璃效果
-   - 上下渐变的深黑（非全黑，避免死板）
-   - 顶部 1px 内嵌高光（像被光打过的瓷漆边缘）
-   - 大尺寸柔投影（漂浮感，有物理重量）
-   - hover 时 brand sage 描边增强而非提亮背景
+   Atelier 主页专属 ——
+   暖纸纸纤维纹理：cream 背景上叠深色 noise，像手工纸张
    ============================================================ */
-.panel-solid {
-  background: linear-gradient(
-    180deg,
-    #161616 0%,
-    #0e0e0e 55%,
-    #090909 100%
-  );
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow:
-    inset 0 1px 0 0 rgba(255, 255, 255, 0.06),
-    0 30px 60px -28px rgba(0, 0, 0, 0.75);
-  transition: border-color 400ms ease, box-shadow 400ms ease, transform 400ms ease;
+.atelier-paper {
+  position: relative;
 }
-.panel-solid:hover {
-  border-color: rgba(161, 193, 161, 0.32);
-  box-shadow:
-    inset 0 1px 0 0 rgba(255, 255, 255, 0.08),
-    0 36px 70px -28px rgba(0, 0, 0, 0.85);
+.atelier-paper::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.07;
+  mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='320' height='320'><filter id='p'><feTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.12 0 0 0 0 0.10 0 0 0 0 0.07 0 0 0 0.8 0'/></filter><rect width='100%25' height='100%25' filter='url(%23p)'/></svg>");
+  background-size: 320px 320px;
 }
 
-/* 大尺寸背景面板（用于 NewAndNotable 整段背景），比卡片更深更宽 */
-.panel-solid-wide {
-  background: linear-gradient(
-    180deg,
-    rgba(10, 10, 10, 0.96) 0%,
-    rgba(5, 5, 5, 0.98) 100%
-  );
-  border: 1px solid rgba(255, 255, 255, 0.07);
-  box-shadow:
-    inset 0 1px 0 0 rgba(255, 255, 255, 0.04),
-    0 60px 100px -40px rgba(0, 0, 0, 0.8);
+/* Atelier 横向滚动画廊 —— 隐藏滚动条但保留滚动能力 */
+.atelier-scroll {
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
-
-/* 横向 marquee 条带 — 实色 + 上下细线，无 blur */
-.panel-marquee {
-  background: linear-gradient(
-    180deg,
-    #0a0a0a 0%,
-    #050505 50%,
-    #0a0a0a 100%
-  );
-  box-shadow:
-    inset 0 1px 0 0 rgba(255, 255, 255, 0.05),
-    inset 0 -1px 0 0 rgba(255, 255, 255, 0.05);
+.atelier-scroll::-webkit-scrollbar {
+  display: none;
+}
+.atelier-snap {
+  scroll-snap-align: start;
 }

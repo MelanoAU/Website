@@ -1,14 +1,12 @@
 "use client"
 
-// 编辑式装饰元素 — Hairline 横线 / Sprig 植物 / Glyph 字母编号
-// 都使用 framer-motion 的 whileInView 触发，避免离屏滚动时浪费动画
+// 编辑式装饰组件 —— 颜色全部参数化，避免被 cream / dark 主题绑死
 
 import { motion } from "framer-motion"
 import { easeCustom } from "@/lib/motion"
 
 /**
  * Hairline — 细水平线，scaleX 从 0 画到 1
- * 用作章节副标题旁边的装饰，或大块之间的分隔
  */
 export function Hairline({
   className = "",
@@ -16,7 +14,7 @@ export function Hairline({
   width = 80,
   thickness = 1,
   origin = "left",
-  color = "rgba(255,255,255,0.55)",
+  color = "rgba(31, 26, 18, 0.45)", // 默认暖炭色（cream 主题）
 }: {
   className?: string
   delay?: number
@@ -38,7 +36,7 @@ export function Hairline({
       initial={{ scaleX: 0, opacity: 0 }}
       whileInView={{ scaleX: 1, opacity: 1 }}
       viewport={{ once: true, amount: 0.5 }}
-      transition={{ duration: 1, delay, ease: easeCustom }}
+      transition={{ duration: 1.4, delay, ease: easeCustom }}
       className={`inline-block ${originClass} ${className}`}
       style={{
         width,
@@ -50,8 +48,7 @@ export function Hairline({
 }
 
 /**
- * Sprig — 极简植物枝条 SVG，pathLength 0 → 1 画线动画
- * 用作 ClosingCta 顶部的装饰花
+ * Sprig — 极简植物枝条 SVG，pathLength 画线动画
  */
 export function Sprig({
   className = "",
@@ -74,31 +71,27 @@ export function Sprig({
       strokeWidth={1.1}
       strokeLinecap="round"
     >
-      {/* 主茎 */}
       <motion.path
         d="M50 95 C 50 70, 50 45, 50 10"
         initial={{ pathLength: 0, opacity: 0 }}
         whileInView={{ pathLength: 1, opacity: 1 }}
         viewport={{ once: true, amount: 0.4 }}
-        transition={{ duration: 1.4, delay, ease: easeCustom }}
+        transition={{ duration: 1.8, delay, ease: easeCustom }}
       />
-      {/* 左叶 */}
       <motion.path
         d="M50 70 C 38 65, 28 60, 18 55 M50 55 C 38 52, 26 50, 14 42"
         initial={{ pathLength: 0, opacity: 0 }}
         whileInView={{ pathLength: 1, opacity: 1 }}
         viewport={{ once: true, amount: 0.4 }}
-        transition={{ duration: 1.6, delay: delay + 0.3, ease: easeCustom }}
+        transition={{ duration: 2, delay: delay + 0.4, ease: easeCustom }}
       />
-      {/* 右叶 */}
       <motion.path
         d="M50 62 C 62 58, 72 52, 82 46 M50 47 C 62 44, 74 42, 86 34"
         initial={{ pathLength: 0, opacity: 0 }}
         whileInView={{ pathLength: 1, opacity: 1 }}
         viewport={{ once: true, amount: 0.4 }}
-        transition={{ duration: 1.6, delay: delay + 0.45, ease: easeCustom }}
+        transition={{ duration: 2, delay: delay + 0.6, ease: easeCustom }}
       />
-      {/* 顶芽 */}
       <motion.circle
         cx="50"
         cy="10"
@@ -108,47 +101,137 @@ export function Sprig({
         initial={{ scale: 0, opacity: 0 }}
         whileInView={{ scale: 1, opacity: 1 }}
         viewport={{ once: true, amount: 0.4 }}
-        transition={{ duration: 0.5, delay: delay + 1.5, ease: easeCustom }}
+        transition={{ duration: 0.6, delay: delay + 1.9, ease: easeCustom }}
       />
     </motion.svg>
   )
 }
 
 /**
- * ChapterMark — 大号衬线编号 + 副标题 + 细线
- * 给每个 section 顶部用，建立编辑式节奏感
+ * EucalyptusBranch — 大尺寸尤加利枝条 SVG，用于 Botanical Spotlight
+ * 比 Sprig 更精细，叶片更立体
  */
-export function ChapterMark({
-  number,
-  label,
+export function EucalyptusBranch({
+  className = "",
   delay = 0,
-  align = "left",
 }: {
-  number: string
-  label: string
+  className?: string
   delay?: number
-  align?: "left" | "center"
 }) {
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
+    <motion.svg
+      aria-hidden
+      viewBox="0 0 400 600"
+      className={className}
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.3}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      {/* 主茎 —— 从右下到左上有弧度 */}
+      <motion.path
+        d="M 320 580 C 310 480, 285 380, 255 290 C 230 215, 200 145, 165 80 C 145 50, 130 25, 120 10"
+        initial={{ pathLength: 0, opacity: 0 }}
+        whileInView={{ pathLength: 1, opacity: 1 }}
+        viewport={{ once: true, amount: 0.3 }}
+        transition={{ duration: 2.4, delay, ease: easeCustom }}
+      />
+
+      {/* 左侧叶片对 */}
+      {[
+        { stem: "M 305 510 C 280 510, 250 505, 215 495", leaf: "M 215 495 c -25 -8, -45 -22, -55 -42 c 18 -5, 38 0, 60 12 z" },
+        { stem: "M 290 440 C 260 442, 225 438, 185 425", leaf: "M 185 425 c -28 -10, -50 -25, -62 -48 c 22 -3, 44 4, 67 18 z" },
+        { stem: "M 270 360 C 240 365, 205 360, 165 345", leaf: "M 165 345 c -30 -12, -52 -28, -65 -52 c 24 -2, 47 6, 72 22 z" },
+        { stem: "M 245 280 C 215 285, 180 280, 140 265", leaf: "M 140 265 c -32 -14, -54 -30, -65 -55 c 25 -2, 50 7, 74 23 z" },
+        { stem: "M 220 200 C 190 205, 155 200, 115 185", leaf: "M 115 185 c -32 -16, -52 -32, -60 -55 c 24 -2, 48 8, 70 22 z" },
+        { stem: "M 195 130 C 170 132, 140 128, 105 115", leaf: "M 105 115 c -28 -15, -45 -28, -50 -48 c 22 -1, 42 6, 60 18 z" },
+        { stem: "M 165 70 C 145 70, 120 65, 90 55", leaf: "M 90 55 c -22 -10, -36 -22, -38 -38 c 18 0, 33 5, 48 14 z" },
+      ].map((leaf, i) => (
+        <g key={`L${i}`}>
+          <motion.path
+            d={leaf.stem}
+            initial={{ pathLength: 0, opacity: 0 }}
+            whileInView={{ pathLength: 1, opacity: 1 }}
+            viewport={{ once: true, amount: 0.3 }}
+            transition={{
+              duration: 1.2,
+              delay: delay + 0.6 + i * 0.15,
+              ease: easeCustom,
+            }}
+          />
+          <motion.path
+            d={leaf.leaf}
+            initial={{ pathLength: 0, opacity: 0 }}
+            whileInView={{ pathLength: 1, opacity: 1 }}
+            viewport={{ once: true, amount: 0.3 }}
+            transition={{
+              duration: 1.4,
+              delay: delay + 0.75 + i * 0.15,
+              ease: easeCustom,
+            }}
+          />
+        </g>
+      ))}
+
+      {/* 右侧叶片对（少一些，造成不对称的自然感） */}
+      {[
+        { stem: "M 300 470 C 320 470, 345 465, 370 455", leaf: "M 370 455 c 22 -8, 36 -22, 38 -42 c -18 -2, -36 5, -52 18 z" },
+        { stem: "M 275 380 C 295 380, 320 375, 345 365", leaf: "M 345 365 c 22 -10, 35 -25, 36 -45 c -20 0, -38 8, -54 22 z" },
+        { stem: "M 250 290 C 270 290, 295 285, 320 273", leaf: "M 320 273 c 22 -12, 32 -28, 30 -50 c -20 2, -38 12, -52 28 z" },
+        { stem: "M 225 200 C 245 200, 268 195, 290 183", leaf: "M 290 183 c 20 -12, 28 -28, 24 -50 c -18 3, -34 13, -46 28 z" },
+        { stem: "M 200 115 C 218 113, 240 108, 258 95", leaf: "M 258 95 c 16 -12, 22 -26, 18 -42 c -16 4, -28 14, -38 26 z" },
+      ].map((leaf, i) => (
+        <g key={`R${i}`}>
+          <motion.path
+            d={leaf.stem}
+            initial={{ pathLength: 0, opacity: 0 }}
+            whileInView={{ pathLength: 1, opacity: 1 }}
+            viewport={{ once: true, amount: 0.3 }}
+            transition={{
+              duration: 1.2,
+              delay: delay + 0.9 + i * 0.18,
+              ease: easeCustom,
+            }}
+          />
+          <motion.path
+            d={leaf.leaf}
+            initial={{ pathLength: 0, opacity: 0 }}
+            whileInView={{ pathLength: 1, opacity: 1 }}
+            viewport={{ once: true, amount: 0.3 }}
+            transition={{
+              duration: 1.4,
+              delay: delay + 1.05 + i * 0.18,
+              ease: easeCustom,
+            }}
+          />
+        </g>
+      ))}
+    </motion.svg>
+  )
+}
+
+/**
+ * Eyebrow —— 全大写小字标签，编辑式
+ */
+export function Eyebrow({
+  children,
+  className = "",
+  delay = 0,
+}: {
+  children: React.ReactNode
+  className?: string
+  delay?: number
+}) {
+  return (
+    <motion.span
+      initial={{ opacity: 0, y: 10 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, amount: 0.5 }}
-      transition={{ duration: 0.8, delay, ease: easeCustom }}
-      className={`flex items-baseline gap-4 md:gap-5 ${
-        align === "center" ? "justify-center" : ""
-      }`}
+      transition={{ duration: 1, delay, ease: easeCustom }}
+      className={`inline-block text-[10px] md:text-[11px] tracking-[0.36em] uppercase ${className}`}
     >
-      {/* 章节编号 — 用纯白避免 sage 在深色背景上对比度不足 */}
-      <span className="font-display italic text-4xl md:text-5xl text-white leading-none">
-        {number}
-      </span>
-      <div className="flex flex-col gap-2">
-        <span className="text-[11px] md:text-xs tracking-[0.32em] uppercase text-white/70">
-          {label}
-        </span>
-        <Hairline width={48} delay={delay + 0.2} color="rgba(161, 193, 161, 0.6)" />
-      </div>
-    </motion.div>
+      {children}
+    </motion.span>
   )
 }

@@ -1,11 +1,11 @@
 import type { Metadata } from "next"
-import { Cormorant_Garamond, Inter } from "next/font/google"
+import { Fraunces, Inter } from "next/font/google"
 import "./globals.css"
 
-// 衬线显示字体 — 用于所有大标题，赋予品牌"自然奢华"的视觉重量
-const cormorant = Cormorant_Garamond({
+// Fraunces — 现代衬线变量字体，soft 轴 + 旋转上下文 axis，
+// 比 Cormorant 更有手工感和当代奢华品牌气质（Aesop / Susanne Kaufmann 类）
+const fraunces = Fraunces({
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
   style: ["normal", "italic"],
   variable: "--font-display",
   display: "swap",
@@ -25,7 +25,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`dark ${cormorant.variable} ${inter.variable}`}>
+    <html lang="en" className={`dark ${fraunces.variable} ${inter.variable}`}>
       <body className="min-h-screen antialiased font-sans">{children}</body>
     </html>
   )
