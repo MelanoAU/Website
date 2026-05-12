@@ -171,6 +171,26 @@ body::after {
 }
 
 /* ============================================================
+   Atelier Process —— 桌面端 sticky pin / 移动端正常滚动
+   - 桌面端：section 高度由内联 style 设为 N*100vh，sticky 内层卡 (N-1)*100vh
+   - 移动端 / 触屏：覆盖为 100dvh，sticky 内层也 100dvh，
+     效果上变成"一屏一节",用户横向滑动切换面板
+   - touch-action: pan-y —— 浏览器原生只允许竖向拖动，横向 swipe
+     不会触发原生滚动，交给 JS 处理
+   ============================================================ */
+.atelier-section {
+  touch-action: pan-y;
+}
+@media (max-width: 767px), (pointer: coarse) {
+  .atelier-section {
+    height: 100dvh !important;
+  }
+  .atelier-inner {
+    height: 100dvh !important;
+  }
+}
+
+/* ============================================================
    Atelier 主页专属 ——
    暖纸纸纤维纹理：cream 背景上叠深色 noise，像手工纸张
    ============================================================ */

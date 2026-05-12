@@ -15,7 +15,13 @@
 // touch 和键盘走同一份 cooldown 但不需要 accumulator —— 它们本身是离散
 // 事件。键盘按一下 = 一个 nav，cooldown 防止连按双跳。
 
-import { useRef, useState, useEffect, useCallback } from "react"
+import {
+  useRef,
+  useState,
+  useEffect,
+  useCallback,
+  useSyncExternalStore,
+} from "react"
 import { motion, useMotionValue, animate } from "framer-motion"
 import { easeCustom } from "@/lib/motion"
 import { Eyebrow, Hairline } from "@/components/ornaments"
@@ -168,6 +174,21 @@ const WHEEL_RESET_QUIET_MS = 150  // wheel 静默此久后认为是新手势，�
 // Touch
 const TOUCH_THRESHOLD = 50
 
+// 移动端 / 触屏检测 —— matchMedia 通过 useSyncExternalStore 订阅
+// 触屏主导 (pointer:coarse) 或 小屏 → 走移动端逻辑（无 pin，横向 swipe）
+const MOBILE_QUERY = "(max-width: 767px), (pointer: coarse)"
+function subscribeMobile(callback: () => void) {
+  const mql = window.matchMedia(MOBILE_QUERY)
+  mql.addEventListener("change", callback)
+  return () => mql.removeEventListener("change", callback)
+}
+function getMobileSnapshot() {
+  return window.matchMedia(MOBILE_QUERY).matches
+}
+function getMobileServerSnapshot() {
+  return false // SSR 默认按桌面渲染，hydration 后矫正
+}
+
 export default function AtelierProcess() {
   const sectionRef = useRef<HTMLElement>(null)
   const [active, setActive] = useState(0)
@@ -184,6 +205,14 @@ export default function AtelierProcess() {
   // wheel 专属：累加 deltaY，过滤小幅惯性
   const wheelAccumRef = useRef(0)
   const lastWheelTimeRef = useRef(0)
+
+  // 移动端 / 触屏检测 —— useSyncExternalStore 是 React 给"订阅外部状态"
+  // 准备的官方 API，比 useState + useEffect 更干净，也避免 effect 里 setState 的 lint 警告
+  const isMobileLayout = useSyncExternalStore(
+    subscribeMobile,
+    getMobileSnapshot,
+    getMobileServerSnapshot
+  )
 
   const x = useMotionValue("0%")
 
@@ -253,7 +282,9 @@ export default function AtelierProcess() {
   )
 
   // ====== Scroll listener: 检测 pin 进入，设 entry dwell ======
+  // 移动端不挂载 —— 移动端 section 是 100dvh，没有 pin 概念
   useEffect(() => {
+    if (isMobileLayout) return
     function check() {
       const inPin = isInPin()
       if (inPin && !wasInPinRef.current) {
@@ -272,10 +303,12 @@ export default function AtelierProcess() {
     check()
     window.addEventListener("scroll", check, { passive: true })
     return () => window.removeEventListener("scroll", check)
-  }, [isInPin])
+  }, [isMobileLayout, isInPin])
 
   // ====== Wheel（accumulator + cooldown）======
+  // 移动端不挂载 —— 浏览器原生竖向滚动
   useEffect(() => {
+    if (isMobileLayout) return
     function handleWheel(e: WheelEvent) {
       if (!isInPin()) {
         wheelAccumRef.current = 0
@@ -318,17 +351,12 @@ export default function AtelierProcess() {
 
     window.addEventListener("wheel", handleWheel, { passive: false })
     return () => window.removeEventListener("wheel", handleWheel)
-  }, [navigate, isInPin])
+  }, [isMobileLayout, navigate, isInPin])
 
-  // ====== Touch（移动端）======
-  // 修复点：
-  //   1) listener 挂到 section 元素而不是 window —— iOS Safari 在
-  //      window-level passive:false 触摸 listener 上有时拦不住原生滚动
-  //   2) onStart 总是记录 startY（不再因 isInPin=false 而早返回）——
-  //      之前会在"还没贴顶时按下、贴顶后抬手"的情况下用错的 startY
-  //   3) 用 startedInPin 旗标判断这是"导航手势"还是"滚入 section 的手势"
-  //   4) 加 touchcancel：系统打断时把 startedInPin 清干净
+  // ====== 桌面端 Touch（竖向 pin 导航 —— 给触屏桌面用）======
+  // 移动端不挂载，避免和下面的横向 swipe 冲突
   useEffect(() => {
+    if (isMobileLayout) return
     const section = sectionRef.current
     if (!section) return
 
@@ -337,15 +365,12 @@ export default function AtelierProcess() {
     let startTime = 0
 
     function onStart(e: TouchEvent) {
-      // 始终记录起点，无论是否已在 pin 中
       startY = e.touches[0].clientY
       startTime = Date.now()
-      // 这个手势是否作为"导航手势"处理，看 touchstart 时刻是否已 pin
       startedInPin = isInPin()
     }
 
     function onMove(e: TouchEvent) {
-      // 当前在 pin 中（包括手势中途刚刚贴顶的情况）就拦截原生滚动
       if (!isInPin()) return
       e.preventDefault()
     }
@@ -353,8 +378,7 @@ export default function AtelierProcess() {
     function onEnd(e: TouchEvent) {
       const wasNavGesture = startedInPin
       startedInPin = false
-      if (!wasNavGesture) return // 这是"滚进 section"的手势，不当导航
-
+      if (!wasNavGesture) return
       if (!isInPin()) return
 
       const now = performance.now()
@@ -387,7 +411,116 @@ export default function AtelierProcess() {
       section.removeEventListener("touchend", onEnd)
       section.removeEventListener("touchcancel", onCancel)
     }
-  }, [navigate, isInPin])
+  }, [isMobileLayout, navigate, isInPin])
+
+  // ====== 移动端 Touch（横向 swipe 切换面板，不锁竖向滚动）======
+  // 工作流：
+  //   - touchstart 记录起点
+  //   - touchmove 累计 10px 后决定方向：|dx| vs |dy|
+  //     · 'v'：放手让浏览器原生竖向滚动页面
+  //     · 'h'：preventDefault 兜底 + 标记，touchend 时按 dx 切换面板
+  //   - touch-action: pan-y 已经在 CSS 里阻断了横向原生拖动，所以即便
+  //     preventDefault 失败也不会有 visual 滚动 bug
+  //   - 切换用 goToPanel —— 同一个动画 + 同一个 ease，保留"渐快渐慢和居中"
+  useEffect(() => {
+    if (!isMobileLayout) return
+    const section = sectionRef.current
+    if (!section) return
+
+    const SWIPE_THRESHOLD = 50     // 横向 swipe 触发面板切换的最小 dx (px)
+    const FLICK_MAX_TIME = 300     // <此时长 + 足够 dx 算 flick
+    const FLICK_MIN_DX = 20
+    const DIRECTION_LOCK_PX = 10   // 累计移动这么多像素后决定方向
+
+    let startX = 0
+    let startY = 0
+    let startTime = 0
+    let direction: "h" | "v" | null = null
+
+    function onStart(e: TouchEvent) {
+      if (isAnimatingRef.current) return
+      const t = e.touches[0]
+      startX = t.clientX
+      startY = t.clientY
+      startTime = Date.now()
+      direction = null
+    }
+
+    function onMove(e: TouchEvent) {
+      if (isAnimatingRef.current) return
+
+      // 已锁定为竖向 → 不干预，浏览器原生滚动
+      if (direction === "v") return
+
+      const t = e.touches[0]
+      const dx = t.clientX - startX
+      const dy = t.clientY - startY
+      const absX = Math.abs(dx)
+      const absY = Math.abs(dy)
+
+      // 还没决定方向 —— 等累计够 10px 再判断
+      if (direction === null) {
+        if (absX < DIRECTION_LOCK_PX && absY < DIRECTION_LOCK_PX) return
+
+        if (absX > absY * 1.2) {
+          direction = "h"
+        } else if (absY > absX * 1.2) {
+          direction = "v"
+          return
+        } else if (Math.max(absX, absY) > 30) {
+          // 较大幅度但方向接近 45°，强制决定
+          direction = absX > absY ? "h" : "v"
+          if (direction === "v") return
+        } else {
+          return // 还不够明确，继续等
+        }
+      }
+
+      // direction === 'h' —— 拦截原生拖动作为兜底
+      // (touch-action: pan-y 应该已经处理了横向，这里是双重保险)
+      e.preventDefault()
+    }
+
+    function onEnd(e: TouchEvent) {
+      const wasHorizontal = direction === "h"
+      direction = null
+      if (!wasHorizontal) return
+      if (isAnimatingRef.current) return
+
+      const endX = e.changedTouches[0].clientX
+      const dx = startX - endX // 正值 = 手指向左滑 = 下一面板
+      const dt = Date.now() - startTime
+
+      const isFlick = Math.abs(dx) > FLICK_MIN_DX && dt < FLICK_MAX_TIME
+      if (Math.abs(dx) < SWIPE_THRESHOLD && !isFlick) return
+
+      const cur = activeRef.current
+      const goingNext = dx > 0
+
+      if (goingNext && cur < N - 1) {
+        goToPanel(cur + 1)
+      } else if (!goingNext && cur > 0) {
+        goToPanel(cur - 1)
+      }
+      // 边界（第一面板右滑 / 最后面板左滑）—— 不做任何事，让用户感觉到边界
+    }
+
+    function onCancel() {
+      direction = null
+    }
+
+    section.addEventListener("touchstart", onStart, { passive: true })
+    section.addEventListener("touchmove", onMove, { passive: false })
+    section.addEventListener("touchend", onEnd, { passive: true })
+    section.addEventListener("touchcancel", onCancel, { passive: true })
+
+    return () => {
+      section.removeEventListener("touchstart", onStart)
+      section.removeEventListener("touchmove", onMove)
+      section.removeEventListener("touchend", onEnd)
+      section.removeEventListener("touchcancel", onCancel)
+    }
+  }, [isMobileLayout, goToPanel])
 
   // ====== Keyboard ======
   useEffect(() => {
@@ -435,10 +568,10 @@ export default function AtelierProcess() {
   return (
     <section
       ref={sectionRef}
-      className="relative"
+      className="relative atelier-section"
       style={{ height: `${N * 100}vh` }}
     >
-      <div className="sticky top-0 h-screen overflow-hidden flex flex-col">
+      <div className="atelier-inner sticky top-0 h-screen overflow-hidden flex flex-col">
         {/* ============ Header 段 ============ */}
         <div className="shrink-0 relative z-10 px-6 md:px-12 pt-28 md:pt-32 pb-4 md:pb-6">
           <div className="mx-auto max-w-6xl">
