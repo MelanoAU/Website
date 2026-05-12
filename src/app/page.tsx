@@ -2,6 +2,7 @@ import Header from "@/components/header"
 import FixedVideoBackground from "@/components/fixed-video-background"
 import Hero from "@/components/hero"
 import Mission from "@/components/mission"
+import BrandMarquee from "@/components/brand-marquee"
 import Pillars from "@/components/pillars"
 import NewAndNotable from "@/components/new-and-notable"
 import ClosingCta from "@/components/closing-cta"
@@ -20,6 +21,7 @@ export default async function HomePage() {
       <main className="relative overflow-x-clip">
         <Hero />
         <Mission />
+        <BrandMarquee />
         <Pillars />
         <NewAndNotable products={products} />
         <ClosingCta />

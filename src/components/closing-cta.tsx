@@ -1,53 +1,60 @@
 "use client"
 
-import { motion, cubicBezier } from "framer-motion"
+import { motion } from "framer-motion"
 import { ArrowRight } from "lucide-react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-
-const easeBezier = cubicBezier(0.22, 1, 0.36, 1)
+import { maskReveal, revealUp } from "@/lib/motion"
+import { Sprig, ChapterMark } from "@/components/ornaments"
 
 export default function ClosingCta() {
   return (
-    <section className="relative min-h-[80svh] flex items-center px-6 py-28">
-      <div className="mx-auto max-w-4xl text-center">
-        <motion.span
-          initial={{ opacity: 0, y: 16 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, amount: 0.6 }}
-          transition={{ duration: 0.6, ease: easeBezier }}
-          className="block text-[11px] md:text-xs tracking-[0.32em] uppercase text-white/70"
-        >
-          Begin
-        </motion.span>
+    <section className="relative min-h-[85svh] flex items-center px-6 py-32">
+      {/* 居中柔光晕 — 给收尾大字一点光感重量 */}
+      <div
+        aria-hidden
+        className="absolute inset-0 mx-auto max-w-3xl pointer-events-none"
+        style={{
+          background:
+            "radial-gradient(ellipse at center, rgba(161,193,161,0.10) 0%, rgba(0,0,0,0) 60%)",
+        }}
+      />
 
-        <motion.h2
-          initial={{ opacity: 0, y: 28 }}
-          whileInView={{ opacity: 1, y: 0 }}
+      <div className="relative mx-auto max-w-4xl text-center">
+        {/* 章节编号 04 */}
+        <div className="inline-block">
+          <ChapterMark number="04" label="Begin" align="center" />
+        </div>
+
+        {/* 植物 SVG 装饰 — 中央位置，pathLength 画线动画 */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          whileInView={{ opacity: 1 }}
           viewport={{ once: true, amount: 0.4 }}
-          transition={{ duration: 0.8, ease: easeBezier }}
-          className="mt-5 text-5xl md:text-7xl font-semibold tracking-tight text-white leading-[1.05]"
+          transition={{ duration: 0.6, delay: 0.2 }}
+          className="mt-10 flex justify-center text-brand/85"
         >
-          Find your glow.
-        </motion.h2>
+          <Sprig size={64} delay={0.3} />
+        </motion.div>
+
+        {/* 大标题 — clip 擦出 + 衬线斜体 */}
+        <div className="mt-8 overflow-hidden">
+          <motion.h2
+            {...maskReveal(0.1, 1.2)}
+            className="font-display italic font-medium tracking-tight text-white leading-[1.02] text-[64px] md:text-[120px]"
+          >
+            Find your glow.
+          </motion.h2>
+        </div>
 
         <motion.p
-          initial={{ opacity: 0, y: 24 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, amount: 0.4 }}
-          transition={{ duration: 0.7, delay: 0.15, ease: easeBezier }}
-          className="mt-6 text-base md:text-lg text-white/80"
+          {...revealUp(0.2, 0.8)}
+          className="mt-8 text-base md:text-lg text-white/80 leading-relaxed max-w-xl mx-auto"
         >
           Explore the full Melano range — every formula, every ritual.
         </motion.p>
 
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, amount: 0.4 }}
-          transition={{ duration: 0.7, delay: 0.25, ease: easeBezier }}
-          className="mt-10"
-        >
+        <motion.div {...revealUp(0.35, 0.8)} className="mt-12">
           <div className="inline-block border border-white/80 p-1 md:p-1.5">
             <Button
               asChild

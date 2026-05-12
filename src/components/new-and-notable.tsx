@@ -1,84 +1,133 @@
 "use client"
 
-import Image from "next/image"
 import Link from "next/link"
-import { useCallback, useEffect, useState } from "react"
+import { useRef } from "react"
 import useEmblaCarousel from "embla-carousel-react"
-import { ChevronLeft, ChevronRight } from "lucide-react"
-import { motion, cubicBezier } from "framer-motion"
+import { motion, useScroll, useTransform } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import type { NewProduct } from "@/lib/products"
-import { asset } from '@/lib/asset'
-import { Img, Video, Source } from '@/components/AssetMedia'
-import ImgFit from '@/components/ImgFit'
+import ImgFit from "@/components/ImgFit"
+import { maskReveal, revealUp } from "@/lib/motion"
+import { ChapterMark } from "@/components/ornaments"
 
-const easeBezier = cubicBezier(0.22, 1, 0.36, 1)
+// ====== 单卡片：图片有滚动驱动的横向 X 漂移（subtle parallax） ======
+function ProductCard({
+  p,
+  i,
+}: {
+  p: NewProduct
+  i: number
+}) {
+  const ref = useRef<HTMLElement>(null)
+  const { scrollYProgress } = useScroll({
+    target: ref,
+    offset: ["start end", "end start"],
+  })
+  // 三张卡：左卡向右漂、中卡向左漂、右卡向右漂（交错节奏）
+  // 强度故意保持很小（±16px），让动作高级不抢戏
+  const xRange: [number, number] =
+    i === 0 ? [-16, 16] : i === 2 ? [16, -16] : [12, -12]
+  const x = useTransform(scrollYProgress, [0, 1], xRange)
+
+  return (
+    <article
+      ref={ref}
+      className="
+        h-full flex flex-col rounded-2xl
+        bg-white/[0.04] border border-white/10
+        hover:bg-white/[0.07] hover:border-brand/30
+        transition-colors duration-500
+        p-6
+      "
+    >
+      {/* 产品图：被一个 overflow-hidden 容器包裹，内部 motion.div 横向 parallax */}
+      <Link
+        href={`/product/${p.id}`}
+        className="relative aspect-[4/3] overflow-hidden rounded-xl bg-white/5"
+      >
+        <motion.div style={{ x }} className="absolute inset-0 will-change-transform">
+          <ImgFit src={p.image} alt={p.title} mode="contain" />
+        </motion.div>
+      </Link>
+
+      <Link href={`/product/${p.id}`} className="mt-6 min-h-[88px] block">
+        <h3 className="font-display text-[22px] md:text-2xl font-medium leading-snug text-white">
+          {p.title}
+        </h3>
+        <p className="mt-2 text-[14px] leading-relaxed text-white/70">
+          {p.subtitle}
+        </p>
+      </Link>
+
+      <div className="mt-auto">
+        <div className="mt-4 text-[15px] font-medium text-white tracking-wide">
+          {p.price}
+        </div>
+        <div className="mt-4">
+          <Button
+            className="w-full h-12 rounded-full bg-brand text-white hover:bg-brand/90 transition-colors"
+            asChild
+          >
+            <Link href={`/product/${p.id}`}>Add to cart</Link>
+          </Button>
+        </div>
+      </div>
+    </article>
+  )
+}
 
 export default function NewAndNotable({ products }: { products: NewProduct[] }) {
-  const items = products
-
-  // 若没有可展示的项目，可选择直接不渲染该区块
-  if (!items.length) return null
-
-  const [emblaRef, emblaApi] = useEmblaCarousel({
+  // Hooks 必须在条件 return 之前调用 — 满足 React rules-of-hooks。
+  // Embla 提供原生触屏 / 鼠标拖拽。这里不需要外部 UI 控件，
+  // 所以只保留 ref，跳过状态追踪（更轻量、更好维护）。
+  const [emblaRef] = useEmblaCarousel({
     align: "start",
     loop: false,
     containScroll: "trimSnaps",
   })
-  const [selectedIndex, setSelectedIndex] = useState(0)
-  const [canPrev, setCanPrev] = useState(false)
-  const [canNext, setCanNext] = useState(false)
-  const [snaps, setSnaps] = useState<number[]>([])
 
-  const onSelect = useCallback(() => {
-    if (!emblaApi) return
-    setSelectedIndex(emblaApi.selectedScrollSnap())
-    setCanPrev(emblaApi.canScrollPrev())
-    setCanNext(emblaApi.canScrollNext())
-  }, [emblaApi])
-
-  useEffect(() => {
-    if (!emblaApi) return
-    onSelect()
-    setSnaps(emblaApi.scrollSnapList())
-    emblaApi.on("reInit", onSelect)
-    emblaApi.on("select", onSelect)
-  }, [emblaApi, onSelect])
+  const items = products
+  if (!items.length) return null
 
   return (
-    <section className="relative px-6 py-24">
+    <section className="relative px-6 py-28">
+      {/* 背景卡：更深更厚实 */}
       <div
         aria-hidden
-        className="hidden md:block absolute inset-x-0 inset-y-10 mx-auto max-w-7xl rounded-3xl bg-black/55 backdrop-blur-md border border-white/10"
+        className="hidden md:block absolute inset-x-0 inset-y-10 mx-auto max-w-7xl rounded-3xl bg-black/65 backdrop-blur-md border border-white/10"
       />
       <div className="relative mx-auto max-w-6xl">
-        <motion.div
-          initial={{ opacity: 0, y: 24 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, amount: 0.4 }}
-          transition={{ duration: 0.7, ease: easeBezier }}
-          className="text-center"
-        >
-          <span className="block text-[11px] md:text-xs tracking-[0.32em] uppercase text-white/70">
-            The Range
-          </span>
-          <h2 className="mt-4 text-3xl md:text-5xl font-semibold tracking-tight text-white">
-            New and notable
-          </h2>
-          <p className="mt-4 max-w-2xl mx-auto text-sm md:text-base text-white/75">
-            A collection of longstanding formulations and recent additions to the range — each likely to make for a memorable gift.
-          </p>
-        </motion.div>
+        {/* 章节编号 03 — 居中布局 */}
+        <div className="text-center">
+          <div className="inline-block">
+            <ChapterMark number="03" label="The Range" align="center" />
+          </div>
+        </div>
 
-        {/* Mobile：竖向编辑式卡片，单列大图 + 行内价格/CTA */}
-        <ul className="md:hidden mt-10 space-y-6">
+        {/* 大标题 — clip 擦出，衬线斜体重点词 */}
+        <div className="mt-10 overflow-hidden text-center">
+          <motion.h2
+            {...maskReveal(0.1, 1.1)}
+            className="font-display font-medium tracking-tight text-white text-[40px] md:text-[72px] leading-[1.05]"
+          >
+            New <span className="italic text-brand/90">&amp;</span> notable.
+          </motion.h2>
+        </div>
+
+        <motion.p
+          {...revealUp(0.2, 0.8)}
+          className="mt-6 max-w-2xl mx-auto text-center text-base md:text-lg text-white/75 leading-relaxed"
+        >
+          A collection of longstanding formulations and recent additions to the
+          range — each likely to make for a memorable gift.
+        </motion.p>
+
+        {/* Mobile：单列堆叠 */}
+        <ul className="md:hidden mt-12 space-y-6">
           {items.map((p, i) => (
             <motion.li
               key={p.id}
-              initial={{ opacity: 0, y: 28 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, amount: 0.25 }}
-              transition={{ duration: 0.7, delay: i * 0.08, ease: easeBezier }}
+              {...revealUp(i * 0.08, 0.75)}
               className="overflow-hidden rounded-2xl bg-black/55 backdrop-blur-md border border-white/10"
             >
               <Link
@@ -88,9 +137,9 @@ export default function NewAndNotable({ products }: { products: NewProduct[] }) 
                 <ImgFit src={p.image} alt={p.title} mode="contain" />
               </Link>
 
-              <div className="px-5 pt-5 pb-6">
+              <div className="px-6 pt-5 pb-6">
                 <Link href={`/product/${p.id}`} className="block">
-                  <h3 className="text-xl font-semibold leading-snug text-white">
+                  <h3 className="font-display text-2xl font-medium leading-snug text-white">
                     {p.title}
                   </h3>
                   <p className="mt-2 text-sm text-white/70 leading-relaxed">
@@ -114,44 +163,19 @@ export default function NewAndNotable({ products }: { products: NewProduct[] }) 
           ))}
         </ul>
 
-        {/* Desktop：保留三栏轮播 */}
+        {/* Desktop：三栏 Embla 横向轮播 + 每张卡片产品图自带 X parallax */}
         <motion.div
-          initial={{ opacity: 0, y: 32 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, amount: 0.2 }}
-          transition={{ duration: 0.8, delay: 0.1, ease: easeBezier }}
-          className="hidden md:block relative mt-12"
+          {...revealUp(0.15, 0.85)}
+          className="hidden md:block relative mt-14"
         >
           <div className="overflow-hidden" ref={emblaRef}>
-            {/* 等高关键：items-stretch + 每个 article 用 flex-col + h-full，底部 mt-auto */}
             <div className="flex -ml-4 items-stretch">
-              {items.map((p) => (
-                <div key={p.id} className="pl-4 basis-full sm:basis-1/2 lg:basis-1/3">
-                  <article className="h-full flex flex-col rounded-2xl bg-white/[0.04] border border-white/10 p-5 hover:bg-white/[0.07] hover:border-white/15 transition-colors">
-                    {/* 产品图：统一 4:3 比例 */}
-                    <Link href={`/product/${p.id}`} className="relative aspect-[4/3] overflow-hidden rounded-xl bg-white/5">
-                      <ImgFit src={p.image} alt={p.title} mode="contain" />
-                    </Link>
-
-                    {/* 标题 + 文案：固定最小高度，避免一高一低 */}
-                    <Link href={`/product/${p.id}`} className="mt-5 min-h-[88px] block">
-                      <h3 className="text-[18px] font-semibold leading-snug text-white">{p.title}</h3>
-                      <p className="mt-2 text-[14px] leading-relaxed text-white/70">{p.subtitle}</p>
-                    </Link>
-
-                    {/* 底部：价格 + 按钮 */}
-                    <div className="mt-auto">
-                      <div className="mt-4 text-[15px] font-medium text-white">{p.price}</div>
-                      <div className="mt-4">
-                        <Button
-                          className="w-full h-12 rounded-full bg-brand text-white hover:bg-brand/90 transition-colors"
-                          asChild
-                        >
-                          <Link href={`/product/${p.id}`}>Add to cart</Link>
-                        </Button>
-                      </div>
-                    </div>
-                  </article>
+              {items.map((p, i) => (
+                <div
+                  key={p.id}
+                  className="pl-4 basis-full sm:basis-1/2 lg:basis-1/3"
+                >
+                  <ProductCard p={p} i={i} />
                 </div>
               ))}
             </div>
