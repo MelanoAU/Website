@@ -188,15 +188,6 @@ body::after {
   background-size: 320px 320px;
 }
 
-/* Atelier 横向滚动画廊 —— 隐藏滚动条但保留滚动能力 */
-.atelier-scroll {
-  scroll-snap-type: x mandatory;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-}
-.atelier-scroll::-webkit-scrollbar {
-  display: none;
-}
-.atelier-snap {
-  scroll-snap-align: start;
-}
+/* （之前 .atelier-scroll / .atelier-snap CSS scroll-snap 实现已废弃，
+   现在 Atelier Process 用 framer-motion sticky + translateX 实现
+   scroll-jacked 横向画廊，不再需要 CSS scroll-snap。） */
