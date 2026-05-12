@@ -320,21 +320,41 @@ export default function AtelierProcess() {
     return () => window.removeEventListener("wheel", handleWheel)
   }, [navigate, isInPin])
 
-  // ====== Touch ======
+  // ====== Touch（移动端）======
+  // 修复点：
+  //   1) listener 挂到 section 元素而不是 window —— iOS Safari 在
+  //      window-level passive:false 触摸 listener 上有时拦不住原生滚动
+  //   2) onStart 总是记录 startY（不再因 isInPin=false 而早返回）——
+  //      之前会在"还没贴顶时按下、贴顶后抬手"的情况下用错的 startY
+  //   3) 用 startedInPin 旗标判断这是"导航手势"还是"滚入 section 的手势"
+  //   4) 加 touchcancel：系统打断时把 startedInPin 清干净
   useEffect(() => {
+    const section = sectionRef.current
+    if (!section) return
+
+    let startedInPin = false
     let startY = 0
     let startTime = 0
 
     function onStart(e: TouchEvent) {
-      if (!isInPin()) return
+      // 始终记录起点，无论是否已在 pin 中
       startY = e.touches[0].clientY
       startTime = Date.now()
+      // 这个手势是否作为"导航手势"处理，看 touchstart 时刻是否已 pin
+      startedInPin = isInPin()
     }
+
     function onMove(e: TouchEvent) {
+      // 当前在 pin 中（包括手势中途刚刚贴顶的情况）就拦截原生滚动
       if (!isInPin()) return
       e.preventDefault()
     }
+
     function onEnd(e: TouchEvent) {
+      const wasNavGesture = startedInPin
+      startedInPin = false
+      if (!wasNavGesture) return // 这是"滚进 section"的手势，不当导航
+
       if (!isInPin()) return
 
       const now = performance.now()
@@ -352,14 +372,20 @@ export default function AtelierProcess() {
       navigate(dy > 0)
     }
 
-    window.addEventListener("touchstart", onStart, { passive: true })
-    window.addEventListener("touchmove", onMove, { passive: false })
-    window.addEventListener("touchend", onEnd, { passive: true })
+    function onCancel() {
+      startedInPin = false
+    }
+
+    section.addEventListener("touchstart", onStart, { passive: true })
+    section.addEventListener("touchmove", onMove, { passive: false })
+    section.addEventListener("touchend", onEnd, { passive: true })
+    section.addEventListener("touchcancel", onCancel, { passive: true })
 
     return () => {
-      window.removeEventListener("touchstart", onStart)
-      window.removeEventListener("touchmove", onMove)
-      window.removeEventListener("touchend", onEnd)
+      section.removeEventListener("touchstart", onStart)
+      section.removeEventListener("touchmove", onMove)
+      section.removeEventListener("touchend", onEnd)
+      section.removeEventListener("touchcancel", onCancel)
     }
   }, [navigate, isInPin])
 
