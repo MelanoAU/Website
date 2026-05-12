@@ -3,8 +3,7 @@
 // The Edit —— 杂志跨页式产品介绍
 
 import Link from "next/link"
-import { motion, useScroll, useTransform } from "framer-motion"
-import { useRef } from "react"
+import { motion } from "framer-motion"
 import type { NewProduct } from "@/lib/products"
 import ImgFit from "@/components/ImgFit"
 import { easeCustom, revealLeft, revealRight, revealUp } from "@/lib/motion"
@@ -19,18 +18,8 @@ function EditRow({
   index: number
   flip: boolean
 }) {
-  const ref = useRef<HTMLDivElement>(null)
-  const { scrollYProgress } = useScroll({
-    target: ref,
-    offset: ["start end", "end start"],
-  })
-  const imgY = useTransform(scrollYProgress, [0, 1], [60, -60])
-
   return (
-    <div
-      ref={ref}
-      className="grid grid-cols-1 md:grid-cols-12 gap-10 md:gap-16 items-center"
-    >
+    <div className="grid grid-cols-1 md:grid-cols-12 gap-10 md:gap-16 items-center">
       {/* 产品图 —— 7 列 */}
       <motion.div
         {...(flip ? revealRight(0, 1.4) : revealLeft(0, 1.4))}
@@ -49,12 +38,7 @@ function EditRow({
             border border-white/10
           "
         >
-          <motion.div
-            style={{ y: imgY }}
-            className="absolute inset-0 will-change-transform"
-          >
-            <ImgFit src={p.image} alt={p.title} mode="contain" />
-          </motion.div>
+          <ImgFit src={p.image} alt={p.title} mode="contain" />
         </Link>
       </motion.div>
 
