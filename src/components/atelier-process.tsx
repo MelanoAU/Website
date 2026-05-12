@@ -3,15 +3,17 @@
 // The Atelier —— Scroll-jacked horizontal pinned gallery
 //
 // 工作原理：
-//   外层 <section> 高度设为 (N × 100vh)，N = 面板数。
-//   内层 sticky 子容器贴在视口顶部，被"卡住" (N-1)*100vh 的滚动距离。
+//   外层 <section> 高度 = N × 100vh。
+//   内层 sticky 容器贴在视口顶部，被卡住 (N-1)×100vh 的距离。
 //   在这段被卡住的垂直滚动里，里面的横向 track 用 translateX 从 0% 滚到
-//   -((N-1)/N * 100)%，正好露出最后一个面板。这样视觉上：用户滚轮向下
-//   滚 → 页面不动 → 四个面板从左向右依次进场 → 第四个完成后页面恢复
-//   垂直滚动继续往下走。反向滚动同理。
+//   -((N-1)/N × 100)%，正好露出最后一个面板。视觉上：用户滚轮向下滚 →
+//   页面不动 → 四个面板从左向右依次进场 → 第四个完成后页面恢复垂直滚动。
 //
-// useSpring 给 x 加一点弹性惯性，鼠标滚轮触发时不会突兀。
-// prev/next 按钮和圆点改成程序滚动 window.scrollTo 到对应 progress。
+// 关键修复（与早期版本对比）：
+//   1. track 必须有显式 width: ${N*100}vw —— 否则 translateX(%) 用的是
+//      flex 容器自身宽度（默认 100vw），算出来只移动 75vw 而不是 300vw
+//   2. sticky 内部用 flex flex-col：header / track(flex-1) / dots 各占
+//      自己的纵向区间 —— 否则内容会 items-center 溢出到 header 上
 
 import { useRef, useState } from "react"
 import {
@@ -155,36 +157,29 @@ const STEPS: Step[] = [
 ]
 
 const N = STEPS.length
-// 最后位置：track 移动 (N-1)/N 的自身宽度，正好露出最后一个面板
-const END_PERCENT = -((N - 1) / N) * 100
+const END_PERCENT = -((N - 1) / N) * 100  // 4 panels → -75%
 
 export default function AtelierProcess() {
   const sectionRef = useRef<HTMLElement>(null)
   const [active, setActive] = useState(0)
 
-  // 整个外层 section 进入到离开视口的进度
   const { scrollYProgress } = useScroll({
     target: sectionRef,
     offset: ["start start", "end end"],
   })
 
-  // 原始横向位移
   const rawX = useTransform(scrollYProgress, [0, 1], ["0%", `${END_PERCENT}%`])
-
-  // 弹簧平滑：滚轮滚动时面板移动有一点惯性，更高级
   const x = useSpring(rawX, {
     stiffness: 80,
     damping: 28,
     mass: 0.4,
   })
 
-  // 跟随 scroll 进度更新 active index（控制圆点和按钮 disabled 状态）
   useMotionValueEvent(scrollYProgress, "change", (v) => {
     const idx = Math.min(N - 1, Math.max(0, Math.round(v * (N - 1))))
     setActive(idx)
   })
 
-  // 程序滚动到指定面板 —— prev/next 和圆点都用这个
   function scrollToPanel(i: number) {
     const el = sectionRef.current
     if (!el) return
@@ -202,20 +197,25 @@ export default function AtelierProcess() {
     <section
       ref={sectionRef}
       className="relative"
-      // N × 100vh：留出 (N-1) × 100vh 给 sticky pin 期间消耗的垂直滚动
       style={{ height: `${N * 100}vh` }}
     >
-      {/* Sticky 内层：在 section 范围内卡住 (N-1)×100vh 的距离 */}
-      <div className="sticky top-0 h-screen overflow-hidden">
-        {/* ============ 顶部固定头部条 ============ */}
-        <div className="absolute top-0 inset-x-0 z-20 px-6 md:px-12 pt-32 md:pt-36">
+      {/*
+        Sticky 容器 —— flex column 把垂直空间切成三段：
+          1. header (shrink-0)
+          2. track  (flex-1) ← 文字内容只能在这块里挤
+          3. dots   (shrink-0)
+        这样内容再也不会溢出到 header 上去。
+      */}
+      <div className="sticky top-0 h-screen overflow-hidden flex flex-col">
+        {/* ============ Header 段 ============ */}
+        <div className="shrink-0 relative z-10 px-6 md:px-12 pt-28 md:pt-32 pb-4 md:pb-6">
           <div className="mx-auto max-w-6xl">
             <div className="flex items-center gap-4 text-white/70">
               <Hairline width={32} />
               <Eyebrow>The Atelier · Four Hands</Eyebrow>
             </div>
 
-            <div className="mt-5 flex items-end justify-between gap-6">
+            <div className="mt-4 md:mt-5 flex items-end justify-between gap-6">
               <motion.h2
                 initial={{ opacity: 0, y: 24 }}
                 whileInView={{ opacity: 1, y: 0 }}
@@ -223,7 +223,7 @@ export default function AtelierProcess() {
                 transition={{ duration: 1.4, ease: easeCustom }}
                 className="
                   font-display font-light
-                  text-[36px] md:text-[60px] lg:text-[72px]
+                  text-[32px] md:text-[52px] lg:text-[64px]
                   leading-[0.95]
                   tracking-tight
                   text-white
@@ -233,7 +233,6 @@ export default function AtelierProcess() {
                 <span className="italic">How</span> a bottle is made.
               </motion.h2>
 
-              {/* 桌面 prev/next —— 触发程序滚动 */}
               <div className="hidden md:flex items-center gap-3 pb-2">
                 <button
                   type="button"
@@ -241,7 +240,7 @@ export default function AtelierProcess() {
                   disabled={active === 0}
                   aria-label="Previous step"
                   className="
-                    h-12 w-12 grid place-items-center rounded-full
+                    h-11 w-11 grid place-items-center rounded-full
                     border border-white/30
                     text-white
                     hover:bg-white hover:text-black
@@ -258,7 +257,7 @@ export default function AtelierProcess() {
                   disabled={active === N - 1}
                   aria-label="Next step"
                   className="
-                    h-12 w-12 grid place-items-center rounded-full
+                    h-11 w-11 grid place-items-center rounded-full
                     border border-white/30
                     text-white
                     hover:bg-white hover:text-black
@@ -274,10 +273,14 @@ export default function AtelierProcess() {
           </div>
         </div>
 
-        {/* ============ 横向 track —— 4 个全屏面板 ============ */}
+        {/* ============ 横向 Track 段 ============
+            关键：显式 width = N*100vw —— 否则 translateX(%) 算的是
+            元素自身的 100vw（flex container 默认填充父宽），结果只移动
+            -75vw 而不是 -300vw。
+        */}
         <motion.div
-          style={{ x }}
-          className="flex h-full will-change-transform"
+          style={{ x, width: `${N * 100}vw` }}
+          className="flex flex-1 min-h-0 will-change-transform"
         >
           {STEPS.map(({ num, title, caption, body, icon: Icon }, i) => (
             <article
@@ -286,36 +289,35 @@ export default function AtelierProcess() {
                 shrink-0 w-screen h-full
                 flex items-center
                 px-6 md:px-12
-                pt-44 md:pt-56
-                pb-24 md:pb-28
+                overflow-hidden
               "
             >
-              <div className="w-full max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-10 md:gap-16 items-center">
+              <div className="w-full max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-12 items-center">
                 {/* 文字栏 */}
                 <div>
-                  <span className="block font-display italic font-light text-brand text-[140px] md:text-[200px] leading-[0.85]">
+                  <span className="block font-display italic font-light text-brand text-[72px] md:text-[120px] lg:text-[160px] leading-[0.85]">
                     {num}
                   </span>
                   <span className="block mt-2 text-[10px] md:text-[11px] tracking-[0.3em] uppercase text-white/65">
                     Step {i + 1} of {N}
                   </span>
 
-                  <Hairline width={48} delay={0.2} className="mt-6" />
+                  <Hairline width={48} delay={0.2} className="mt-5" />
 
-                  <h3 className="mt-8 font-display italic font-light text-[60px] md:text-[80px] lg:text-[96px] leading-[0.95] tracking-tight text-white">
+                  <h3 className="mt-6 font-display italic font-light text-[36px] md:text-[56px] lg:text-[72px] leading-[0.95] tracking-tight text-white">
                     {title}
                   </h3>
-                  <p className="mt-3 font-display italic text-[14px] md:text-[16px] text-white/65 tracking-wide">
+                  <p className="mt-2 font-display italic text-[13px] md:text-[15px] text-white/65 tracking-wide">
                     {caption}
                   </p>
-                  <p className="mt-8 font-display text-white/80 text-[17px] md:text-[19px] leading-[1.65] max-w-md">
+                  <p className="mt-5 font-display text-white/80 text-[15px] md:text-[17px] leading-[1.6] max-w-md">
                     {body}
                   </p>
                 </div>
 
-                {/* SVG 栏 —— 大号简笔图 */}
+                {/* SVG 栏 */}
                 <div className="flex justify-center md:justify-end">
-                  <div className="text-brand/85 w-[180px] md:w-[280px] lg:w-[360px] aspect-square">
+                  <div className="text-brand/85 w-[140px] md:w-[220px] lg:w-[280px] aspect-square">
                     <Icon />
                   </div>
                 </div>
@@ -324,8 +326,8 @@ export default function AtelierProcess() {
           ))}
         </motion.div>
 
-        {/* ============ 底部圆点分页 ============ */}
-        <div className="absolute bottom-10 md:bottom-14 inset-x-0 z-20 flex items-center justify-center gap-3">
+        {/* ============ 底部圆点分页 段 ============ */}
+        <div className="shrink-0 relative z-10 pb-8 md:pb-12 pt-2 flex items-center justify-center gap-3">
           {STEPS.map((s, i) => (
             <button
               key={s.num}
