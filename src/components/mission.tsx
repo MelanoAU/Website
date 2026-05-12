@@ -1,7 +1,6 @@
 "use client"
 
 // Founder's Letter —— 编辑式长信，单列窄宽，衬线主导
-// 没有花哨动画：只有非常慢的 fade-up，模仿翻开一封信的节奏
 
 import { motion, useScroll, useTransform } from "framer-motion"
 import { useRef } from "react"
@@ -14,18 +13,17 @@ export default function Mission() {
     target: ref,
     offset: ["start end", "end start"],
   })
-  // 极轻 parallax：签名随滚动略向上漂
   const signatureY = useTransform(scrollYProgress, [0, 1], [40, -40])
 
   return (
     <section
       ref={ref}
-      className="relative px-6 py-32 md:py-48 text-charcoal"
+      className="relative px-6 py-32 md:py-48"
     >
       <div className="mx-auto max-w-2xl">
         {/* Eyebrow + 细线 */}
-        <div className="flex items-center gap-4 text-warm-grey">
-          <Hairline width={32} color="rgba(91,79,61,0.45)" />
+        <div className="flex items-center gap-4 text-white/70">
+          <Hairline width={32} />
           <Eyebrow>A letter from the atelier</Eyebrow>
         </div>
 
@@ -41,7 +39,7 @@ export default function Mission() {
             text-[36px] md:text-[52px]
             leading-[1.15]
             tracking-tight
-            text-charcoal
+            text-white
           "
         >
           When my grandmother taught me to crush eucalyptus between two stones,
@@ -57,7 +55,7 @@ export default function Mission() {
           className="
             mt-10 md:mt-12
             font-display
-            text-charcoal/85
+            text-white/85
             text-[19px] md:text-[21px]
             leading-[1.65]
             space-y-6
@@ -88,14 +86,13 @@ export default function Mission() {
           transition={{ duration: 1.4, delay: 0.5, ease: easeCustom }}
           className="mt-14 md:mt-20"
         >
-          {/* 手写感签名（用 italic Fraunces + 大字 + 倾斜近似） */}
           <p
-            className="font-display italic text-charcoal text-[44px] md:text-[60px] leading-none tracking-tight"
+            className="font-display italic text-white text-[44px] md:text-[60px] leading-none tracking-tight"
             style={{ transform: "skewX(-6deg)" }}
           >
             Anna
           </p>
-          <p className="mt-4 text-sm text-warm-grey tracking-wide">
+          <p className="mt-4 text-sm text-white/65 tracking-wide">
             Anna Mörel · Founder
           </p>
         </motion.div>

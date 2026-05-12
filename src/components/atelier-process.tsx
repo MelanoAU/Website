@@ -2,8 +2,6 @@
 
 // The Atelier —— 横向 scroll-snap 画廊
 // 四个工艺步骤：harvest → press → pour → seal
-// 每一帧是一张"明信片"，用 SVG 简笔画 + 编辑式排版
-// 桌面端有 prev/next 箭头，移动端 swipe
 
 import { useRef, useState, useEffect } from "react"
 import { motion } from "framer-motion"
@@ -18,8 +16,6 @@ type Step = {
   body: string
   icon: () => React.ReactElement
 }
-
-// ====== 每一步的 SVG 简笔图 —— 极简编辑插画 ======
 
 function LeafIcon() {
   return (
@@ -146,7 +142,6 @@ export default function AtelierProcess() {
   const [canPrev, setCanPrev] = useState(false)
   const [canNext, setCanNext] = useState(true)
 
-  // 跟踪滚动位置，更新 active dot 和按钮可用状态
   useEffect(() => {
     const el = scrollerRef.current
     if (!el) return
@@ -169,11 +164,11 @@ export default function AtelierProcess() {
   }
 
   return (
-    <section className="relative py-32 md:py-48 text-charcoal overflow-hidden">
+    <section className="relative py-32 md:py-48 overflow-hidden">
       {/* 章节头 */}
       <div className="px-6 mx-auto max-w-6xl">
-        <div className="flex items-center gap-4 text-warm-grey">
-          <Hairline width={32} color="rgba(91,79,61,0.45)" />
+        <div className="flex items-center gap-4 text-white/70">
+          <Hairline width={32} />
           <Eyebrow>The Atelier · Four Hands</Eyebrow>
         </div>
 
@@ -188,13 +183,14 @@ export default function AtelierProcess() {
               text-[48px] md:text-[80px] lg:text-[96px]
               leading-[0.95]
               tracking-tight
+              text-white
               max-w-xl
             "
           >
             <span className="italic">How</span> a bottle is made.
           </motion.h2>
 
-          {/* 桌面端 prev/next 控件 */}
+          {/* 桌面端 prev/next 控件 —— hover 时反转为白底深字 */}
           <div className="hidden md:flex items-center gap-3">
             <button
               type="button"
@@ -203,10 +199,10 @@ export default function AtelierProcess() {
               aria-label="Previous step"
               className="
                 h-12 w-12 grid place-items-center rounded-full
-                border border-charcoal/30
-                text-charcoal
-                hover:bg-charcoal hover:text-parchment
-                disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-charcoal
+                border border-white/30
+                text-white
+                hover:bg-white hover:text-black
+                disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-white
                 transition-colors duration-500
               "
             >
@@ -219,10 +215,10 @@ export default function AtelierProcess() {
               aria-label="Next step"
               className="
                 h-12 w-12 grid place-items-center rounded-full
-                border border-charcoal/30
-                text-charcoal
-                hover:bg-charcoal hover:text-parchment
-                disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-charcoal
+                border border-white/30
+                text-white
+                hover:bg-white hover:text-black
+                disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-white
                 transition-colors duration-500
               "
             >
@@ -255,42 +251,39 @@ export default function AtelierProcess() {
                   transition={{ duration: 1.4, ease: easeCustom }}
                   className="
                     relative
-                    bg-cream
-                    border border-charcoal/8
+                    bg-black/50
+                    border border-white/10
                     aspect-[5/6] md:aspect-[7/5]
                     p-8 md:p-14
                     flex flex-col
                   "
                 >
-                  {/* 顶部：罗马数字 + caption */}
                   <div className="flex items-start justify-between gap-6">
-                    <span className="font-display italic font-light text-deep-sage text-6xl md:text-8xl leading-none">
+                    <span className="font-display italic font-light text-brand text-6xl md:text-8xl leading-none">
                       {num}
                     </span>
-                    <span className="text-right text-[10px] md:text-[11px] tracking-[0.3em] uppercase text-warm-grey mt-3 md:mt-5">
+                    <span className="text-right text-[10px] md:text-[11px] tracking-[0.3em] uppercase text-white/65 mt-3 md:mt-5">
                       Step {i + 1} of {STEPS.length}
                     </span>
                   </div>
 
-                  {/* 中部：icon —— 占据卡片中央偏右 */}
                   <div className="
                     absolute right-6 md:right-14 top-1/2 -translate-y-1/2
-                    text-deep-sage/85
+                    text-brand/85
                     w-[150px] md:w-[220px] h-[150px] md:h-[220px]
                   ">
                     <Icon />
                   </div>
 
-                  {/* 底部：标题 + caption + 正文 */}
                   <div className="mt-auto max-w-sm">
-                    <Hairline width={36} color="rgba(91,79,61,0.4)" />
-                    <h3 className="mt-5 font-display italic font-light text-[44px] md:text-[64px] leading-[1] tracking-tight text-charcoal">
+                    <Hairline width={36} />
+                    <h3 className="mt-5 font-display italic font-light text-[44px] md:text-[64px] leading-[1] tracking-tight text-white">
                       {title}
                     </h3>
-                    <p className="mt-3 font-display italic text-[14px] md:text-[15px] text-warm-grey tracking-wide">
+                    <p className="mt-3 font-display italic text-[14px] md:text-[15px] text-white/65 tracking-wide">
                       {caption}
                     </p>
-                    <p className="mt-6 font-display text-charcoal/80 text-[16px] md:text-[17px] leading-[1.65]">
+                    <p className="mt-6 font-display text-white/80 text-[16px] md:text-[17px] leading-[1.65]">
                       {body}
                     </p>
                   </div>
@@ -314,7 +307,7 @@ export default function AtelierProcess() {
               aria-label={`Go to step ${i + 1}`}
               className={`
                 h-1.5 rounded-full transition-all duration-500
-                ${active === i ? "w-10 bg-charcoal" : "w-1.5 bg-charcoal/30 hover:bg-charcoal/60"}
+                ${active === i ? "w-10 bg-white" : "w-1.5 bg-white/30 hover:bg-white/60"}
               `}
             />
           ))}

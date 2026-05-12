@@ -14,7 +14,7 @@ export function Hairline({
   width = 80,
   thickness = 1,
   origin = "left",
-  color = "rgba(31, 26, 18, 0.45)", // 默认暖炭色（cream 主题）
+  color = "rgba(255, 255, 255, 0.45)", // 默认白色（深色视频背景）
 }: {
   className?: string
   delay?: number
