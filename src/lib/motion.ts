@@ -43,8 +43,12 @@ export const revealRight = (delay = 0, duration = 0.8) => ({
 
 /** Clip-path 横向擦出 — 文字从左到右像揭开一张纸 */
 export const maskReveal = (delay = 0, duration = 1.05) => ({
-  initial: { clipPath: "inset(0 100% 0 0)" },
-  whileInView: { clipPath: "inset(0 0% 0 0)" },
+  initial: {
+    clipPath: "polygon(0% 0%, 0% 0%, 0% 100%, 0% 100%)",
+  },
+  whileInView: {
+    clipPath: "polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%)",
+  },
   viewport: { once: true, amount: 0.4 },
   transition: { duration, delay, ease: easeCustom } as Transition,
 })

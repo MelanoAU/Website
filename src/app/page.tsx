@@ -4,6 +4,7 @@ import Hero from "@/components/hero"
 import Mission from "@/components/mission"
 import BotanicalSpotlight from "@/components/botanical-spotlight"
 import BrandEthos from "@/components/brand-ethos"
+import BotanicalIndex from "@/components/botanical-index"
 import NewAndNotable from "@/components/new-and-notable"
 import AtelierProcess from "@/components/atelier-process"
 import ClosingCta from "@/components/closing-cta"
@@ -24,6 +25,7 @@ export default async function HomePage() {
         <Mission />
         <BotanicalSpotlight />
         <BrandEthos />
+        <BotanicalIndex />
         <NewAndNotable products={products} />
         <AtelierProcess />
         <ClosingCta />
