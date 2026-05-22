@@ -1,16 +1,16 @@
 "use client"
 
-// Botanical Spotlight —— 单一招牌植物的编辑式分栏
+// Botanical Spotlight —— 草本配方研发理念 · 文左 + 大尺寸尤加利枝条 SVG 在右
 
 import { motion } from "framer-motion"
 import { easeCustom, revealUp } from "@/lib/motion"
 import { Eyebrow, EucalyptusBranch, Hairline } from "@/components/ornaments"
 
 const FACTS = [
-  { label: "Sourced from", value: "Eastern Victoria · Tasmania" },
-  { label: "Approach", value: "Single-plant compositions" },
-  { label: "Formulated in", value: "Melbourne, Victoria" },
-  { label: "Free of", value: "Sulfates, silicones, parabens" },
+  { label: "Method", value: "Slow herbal extraction" },
+  { label: "Key botanicals", value: "Fo-Ti · Biota Leaf · Soapberry · Usman herb" },
+  { label: "Discipline", value: "Mild, scalp-respecting formulations" },
+  { label: "Removed", value: "Stripping surfactants & idle additives" },
 ]
 
 export default function BotanicalSpotlight() {
@@ -21,7 +21,7 @@ export default function BotanicalSpotlight() {
         <div className="md:pt-16">
           <div className="flex items-center gap-4 text-white/70">
             <Hairline width={32} />
-            <Eyebrow>On native materia</Eyebrow>
+            <Eyebrow>On herbal craft</Eyebrow>
           </div>
 
           <motion.h2
@@ -35,7 +35,7 @@ export default function BotanicalSpotlight() {
               text-white
             "
           >
-            Native materia.
+            Slow herbal craft.
           </motion.h2>
 
           <motion.p
@@ -48,7 +48,7 @@ export default function BotanicalSpotlight() {
               text-brand
             "
           >
-            A library of southeast Australian botany, read closely.
+            Ancient wisdom, calibrated for the way we live now.
           </motion.p>
 
           <motion.p
@@ -62,13 +62,14 @@ export default function BotanicalSpotlight() {
               max-w-md
             "
           >
-            Australia carries a botanical inheritance distinct from the
-            European materia that built most of cosmetic history. Our
-            preparations are written from these plants — eastern Victorian
-            wattles, Tasmanian peppers, the alpine kunzeas of the Great
-            Dividing Range — selected for documented efficacy, traceable
-            origin, and a quality of fragrance the synthetic perfume
-            industry has yet to convincingly replicate.
+            Our research team draws on time-honoured plant skincare
+            traditions to develop preparations that are mild enough for
+            daily use and structured enough to keep the scalp&apos;s own
+            ecology intact. Slow extraction and careful proportioning
+            retain the active essence of Fo-Ti, Biota Leaf, Soapberry
+            and Usman herb — and nothing redundant beyond that. From
+            raw material to the finished bar, every step is held to the
+            same standard.
           </motion.p>
 
           <motion.ul

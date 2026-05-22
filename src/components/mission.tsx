@@ -1,6 +1,6 @@
 "use client"
 
-// Founder's Letter —— 编辑式长信，单列窄宽，衬线主导
+// Founder's Letter —— 品牌初心与缘起 · 编辑式长信，单列窄宽，衬线主导
 
 import { motion, useScroll, useTransform } from "framer-motion"
 import { useRef } from "react"
@@ -42,9 +42,8 @@ export default function Mission() {
             text-white
           "
         >
-          The botany of Australia&apos;s southeast is older than the cities
-          above it — and far better catalogued than the cosmetic industry
-          has been quick to notice.
+          Some brands are born from market demand. Others, from a
+          lifelong obsession — and Melano belongs firmly to the latter.
         </motion.p>
 
         {/* 正文段落 */}
@@ -63,24 +62,22 @@ export default function Mission() {
           "
         >
           <p>
-            From the Yarra catchment to the mountain ash forests of the
-            Dandenongs, Victoria sits at the meeting of two botanical
-            kingdoms — dry-country mallee to the west, wet forests to the
-            east. Melano is a study of the plants that grow at their meeting,
-            written for hair, scalp, and the routines that surround them.
+            Melano was founded by an Australian-born Chinese woman
+            raised in Melbourne — a brand written at the meeting of a
+            laid-back Australian life and the long, careful tradition
+            of Eastern herbal medicine.
           </p>
           <p>
-            Our preparations are formulated around native materia and
-            structured around restraint. The library is short on purpose:
-            each bar leads with a single botanical, supported by the few
-            cleansing and conditioning agents that actually contribute to
-            the formulation. No sulfates, no silicones, no
-            parabens, no synthetic fragrance.
+            She grew up alongside the precious botanicals that anchor
+            our work — Fo-Ti, Biota Leaf, Soapberry, Usman herb —
+            plants that carry, in their oldest sense, the meaning of
+            balance and gentle care.
           </p>
           <p>
-            If our preparations find a place in your morning — and your
-            routine feels a little more rooted in where you live — we&apos;ll
-            consider the work done.
+            A long journey across Asia clarified what mild plant-based
+            hair care could be. Nourishment over harsh cleansing.
+            Balance over excessive treatment. Long-term wellness over
+            instant effect. That insight became the spirit of Melano.
           </p>
         </motion.div>
 

@@ -3,6 +3,7 @@ import FixedVideoBackground from "@/components/fixed-video-background"
 import Hero from "@/components/hero"
 import Mission from "@/components/mission"
 import BotanicalSpotlight from "@/components/botanical-spotlight"
+import BrandEthos from "@/components/brand-ethos"
 import NewAndNotable from "@/components/new-and-notable"
 import AtelierProcess from "@/components/atelier-process"
 import ClosingCta from "@/components/closing-cta"
@@ -22,6 +23,7 @@ export default async function HomePage() {
         <Hero />
         <Mission />
         <BotanicalSpotlight />
+        <BrandEthos />
         <NewAndNotable products={products} />
         <AtelierProcess />
         <ClosingCta />
