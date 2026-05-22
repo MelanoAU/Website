@@ -2,6 +2,7 @@ import type { Metadata } from "next"
 import { Fraunces, Inter } from "next/font/google"
 import "./globals.css"
 import BackgroundMusic from "@/components/background-music"
+import { Analytics } from '@vercel/analytics/next'
 
 // Fraunces — 现代衬线变量字体，soft 轴 + 旋转上下文 axis，
 // 比 Cormorant 更有手工感和当代奢华品牌气质（Aesop / Susanne Kaufmann 类）
@@ -30,6 +31,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="min-h-screen antialiased font-sans">
         {children}
         <BackgroundMusic />
+        <Analytics />
       </body>
     </html>
   )
