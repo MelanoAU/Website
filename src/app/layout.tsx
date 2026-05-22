@@ -1,6 +1,7 @@
 import type { Metadata } from "next"
 import { Fraunces, Inter } from "next/font/google"
 import "./globals.css"
+import BackgroundMusic from "@/components/background-music"
 
 // Fraunces — 现代衬线变量字体，soft 轴 + 旋转上下文 axis，
 // 比 Cormorant 更有手工感和当代奢华品牌气质（Aesop / Susanne Kaufmann 类）
@@ -26,7 +27,10 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`dark ${fraunces.variable} ${inter.variable}`}>
-      <body className="min-h-screen antialiased font-sans">{children}</body>
+      <body className="min-h-screen antialiased font-sans">
+        {children}
+        <BackgroundMusic />
+      </body>
     </html>
   )
 }
